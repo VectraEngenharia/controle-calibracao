@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Calibração de Instrumentos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul-escuro:#12283F;
+    --azul:#1F4E78;
+    --azul-claro:#EAF1F8;
+    --cinza-fundo:#F4F6F8;
+    --cinza-borda:#DCE3EA;
+    --texto:#1B2733;
+    --texto-suave:#5B6B7A;
+    --verde:#1E7B4D;
+    --verde-bg:#E5F5EC;
+    --amarelo:#8A6300;
+    --amarelo-bg:#FFF3D6;
+    --laranja:#B04A00;
+    --laranja-bg:#FFE7D2;
+    --vermelho:#B32424;
+    --vermelho-bg:#FBE4E4;
+    --branco:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'IBM Plex Sans', sans-serif;
+    background:var(--cinza-fundo);
+    color:var(--texto);
+  }
+  header{
+    background:var(--azul-escuro);
+    color:var(--branco);
+    padding:18px 24px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:12px;
+  }
+  header h1{
+    font-size:1.15rem;
+    font-weight:600;
+    margin:0;
+    letter-spacing:.2px;
+  }
+  header .sub{
+    font-size:.78rem;
+    color:#9FB3C6;
+    margin-top:2px;
+  }
+  #btnAdminToggle{
+    background:transparent;
+    border:1px solid #3A5772;
+    color:#CFE0EF;
+    padding:8px 14px;
+    border-radius:6px;
+    cursor:pointer;
+    font-size:.85rem;
+    font-family:inherit;
+  }
+  #btnAdminToggle:hover{background:#1C3853;}
+
+  main{max-width:1280px;margin:0 auto;padding:20px 20px 60px;}
+
+  /* ---------- Banner de notificações ---------- */
+  #banner{margin-bottom:18px;}
+  .alerta{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 16px;
+    border-radius:8px;
+    font-size:.88rem;
+    margin-bottom:8px;
+    border:1px solid transparent;
+  }
+  .alerta.vermelho{background:var(--vermelho-bg);color:var(--vermelho);border-color:#F0C4C4;}
+  .alerta.laranja{background:var(--laranja-bg);color:var(--laranja);border-color:#F5CFAE;}
+  .alerta.amarelo{background:var(--amarelo-bg);color:var(--amarelo);border-color:#F0DFA0;}
+  .alerta.ok{background:var(--verde-bg);color:var(--verde);border-color:#BFE3CE;}
+  .alerta b{font-weight:700;}
+  .alerta .icone{font-size:1.1rem;line-height:1;}
+
+  /* ---------- Barra de busca / filtros ---------- */
+  .toolbar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+    margin-bottom:14px;
+  }
+  #busca{
+    flex:1 1 260px;
+    padding:10px 14px;
+    border:1px solid var(--cinza-borda);
+    border-radius:8px;
+    font-size:.9rem;
+    font-family:inherit;
+    background:var(--branco);
+  }
+  select.filtro{
+    padding:10px 12px;
+    border:1px solid var(--cinza-borda);
+    border-radius:8px;
+    font-size:.85rem;
+    font-family:inherit;
+    background:var(--branco);
+    color:var(--texto);
+  }
+  .contagem{font-size:.8rem;color:var(--texto-suave);white-space:nowrap;}
+
+  /* ---------- Tabela ---------- */
+  .tabela-wrap{
+    background:var(--branco);
+    border:1px solid var(--cinza-borda);
+    border-radius:10px;
+    overflow:auto;
+    max-height:70vh;
+  }
+  table{width:100%;border-collapse:collapse;font-size:.83rem;}
+  thead th{
+    position:sticky;top:0;
+    background:var(--azul);
+    color:var(--branco);
+    text-align:left;
+    padding:10px 12px;
+    font-weight:600;
+    white-space:nowrap;
+    cursor:pointer;
+    user-select:none;
+  }
+  thead th:hover{background:#254F76;}
+  tbody td{
+    padding:9px 12px;
+    border-bottom:1px solid var(--cinza-borda);
+    white-space:nowrap;
+  }
+  tbody tr:hover{background:var(--azul-claro);}
+  tbody tr:last-child td{border-bottom:none;}
+
+  .badge{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:3px 9px;
+    border-radius:20px;
+    font-size:.74rem;
+    font-weight:600;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .badge.vermelho{background:var(--vermelho-bg);color:var(--vermelho);}
+  .badge.laranja{background:var(--laranja-bg);color:var(--laranja);}
+  .badge.amarelo{background:var(--amarelo-bg);color:var(--amarelo);}
+  .badge.verde{background:var(--verde-bg);color:var(--verde);}
+  .badge.cinza{background:#EAEDF0;color:var(--texto-suave);}
+
+  .status-ativo{color:var(--verde);font-weight:600;font-size:.78rem;}
+  .status-inativo{color:var(--texto-suave);font-size:.78rem;}
+  .sem-dado{color:#A6B2BD;font-style:italic;}
+
+  .btn-linha{
+    background:none;border:none;cursor:pointer;
+    color:var(--azul);font-size:.78rem;font-weight:600;
+    padding:4px 8px;border-radius:5px;
+  }
+  .btn-linha:hover{background:var(--azul-claro);}
+
+  /* ---------- Painel Admin (drawer) ---------- */
+  #overlay{
+    display:none;position:fixed;inset:0;background:rgba(18,40,63,.45);z-index:40;
+  }
+  #painelAdmin{
+    display:none;position:fixed;top:0;right:0;height:100%;width:min(420px,100%);
+    background:var(--branco);box-shadow:-8px 0 24px rgba(0,0,0,.15);z-index:50;
+    overflow-y:auto;
+  }
+  .painel-header{
+    background:var(--azul-escuro);color:var(--branco);
+    padding:18px 20px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .painel-header h2{margin:0;font-size:1rem;font-weight:600;}
+  .painel-header button{background:none;border:none;color:#CFE0EF;font-size:1.3rem;cursor:pointer;line-height:1;}
+  .painel-corpo{padding:18px 20px;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+  .tab{
+    padding:7px 12px;border-radius:6px;border:1px solid var(--cinza-borda);
+    background:var(--cinza-fundo);font-size:.78rem;cursor:pointer;font-family:inherit;
+  }
+  .tab.ativa{background:var(--azul);color:var(--branco);border-color:var(--azul);}
+
+  .campo{margin-bottom:12px;}
+  .campo label{display:block;font-size:.78rem;color:var(--texto-suave);margin-bottom:4px;font-weight:500;}
+  .campo input, .campo select{
+    width:100%;padding:9px 11px;border:1px solid var(--cinza-borda);border-radius:6px;
+    font-size:.85rem;font-family:inherit;
+  }
+  .btn-primario{
+    width:100%;padding:10px;background:var(--azul);color:var(--branco);border:none;
+    border-radius:6px;font-size:.88rem;font-weight:600;cursor:pointer;font-family:inherit;
+  }
+  .btn-primario:hover{background:#193F63;}
+  .btn-secundario{
+    width:100%;padding:9px;background:none;color:var(--texto-suave);border:1px solid var(--cinza-borda);
+    border-radius:6px;font-size:.82rem;cursor:pointer;font-family:inherit;margin-top:6px;
+  }
+  .msg{font-size:.8rem;padding:9px 11px;border-radius:6px;margin-bottom:12px;display:none;}
+  .msg.erro{background:var(--vermelho-bg);color:var(--vermelho);display:block;}
+  .msg.sucesso{background:var(--verde-bg);color:var(--verde);display:block;}
+
+  .lista-simples{max-height:400px;overflow-y:auto;border:1px solid var(--cinza-borda);border-radius:6px;}
+  .item-simples{padding:9px 11px;border-bottom:1px solid var(--cinza-borda);font-size:.78rem;}
+  .item-simples:last-child{border-bottom:none;}
+  .item-simples .linha1{font-weight:600;margin-bottom:2px;}
+  .item-simples .linha2{color:var(--texto-suave);}
+
+  .rodape-carregando{padding:40px;text-align:center;color:var(--texto-suave);font-size:.85rem;}
+
+  @media (max-width:640px){
+    header{padding:14px 16px;}
+    main{padding:14px 12px 40px;}
+    thead th, tbody td{padding:8px 9px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Controle de Calibração de Instrumentos</h1>
+    <div class="sub">Obra • acompanhamento de certificados e responsáveis</div>
+  </div>
+  <button id="btnAdminToggle">Área do administrador</button>
+</header>
+
+<main>
+  <div id="banner"></div>
+
+  <div class="toolbar">
+    <input id="busca" type="text" placeholder="Pesquisar por instrumento, tag, nº de série, inspetor...">
+    <select id="filtroStatusVenc" class="filtro">
+      <option value="">Todos os vencimentos</option>
+      <option value="vermelho">Vencidos</option>
+      <option value="laranja">≤ 10 dias</option>
+      <option value="amarelo">≤ 20 dias</option>
+      <option value="verde_alerta">≤ 30 dias</option>
+      <option value="verde">Dentro do prazo</option>
+    </select>
+    <select id="filtroAtivo" class="filtro">
+      <option value="">Ativos e inativos</option>
+      <option value="ATIVO">Somente ativos</option>
+      <option value="INATIVO">Somente inativos</option>
+    </select>
+    <span class="contagem" id="contagem"></span>
+  </div>
+
+  <div class="tabela-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th data-col="INSTRUMENTO">Instrumento</th>
+          <th data-col="TAG">Tag</th>
+          <th data-col="Nº DE SERIE">Nº Série</th>
+          <th data-col="MODELO">Modelo</th>
+          <th data-col="MARCA">Marca</th>
+          <th data-col="DATA DA AFERIÇÃO">Aferição</th>
+          <th data-col="DATA DO VENCIMENTO">Vencimento</th>
+          <th data-col="LABORATÓRIO">Laboratório</th>
+          <th data-col="CERTIFICADO">Certificado</th>
+          <th data-col="STATUS">Status</th>
+          <th data-col="INSPETOR">Inspetor</th>
+        </tr>
+      </thead>
+      <tbody id="corpoTabela">
+        <tr><td colspan="11" class="rodape-carregando">Carregando instrumentos...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<div id="overlay"></div>
+<div id="painelAdmin">
+  <div class="painel-header">
+    <h2 id="tituloPainel">Área do administrador</h2>
+    <button id="fecharPainel">✕</button>
+  </div>
+  <div class="painel-corpo">
+
+    <!-- LOGIN -->
+    <div id="blocoLogin">
+      <div class="msg erro" id="msgLoginErro"></div>
+      <div class="campo">
+        <label>Usuário</label>
+        <input id="loginUsuario" type="text" autocomplete="username">
+      </div>
+      <div class="campo">
+        <label>Senha</label>
+        <input id="loginSenha" type="password" autocomplete="current-password">
+      </div>
+      <button class="btn-primario" id="btnLogin">Entrar</button>
+    </div>
+
+    <!-- PAINEL LOGADO -->
+    <div id="blocoLogado" style="display:none;">
+      <div style="font-size:.8rem;color:var(--texto-suave);margin-bottom:14px;">
+        Conectado como <b id="nomeAdminLogado"></b>
+        <button class="btn-linha" id="btnSair" style="float:right;">Sair</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab ativa" data-tab="adicionar">Adicionar</button>
+        <button class="tab" data-tab="reatribuir">Reatribuir inspetor</button>
+        <button class="tab" data-tab="status">Status</button>
+        <button class="tab" data-tab="remover">Remover</button>
+        <button class="tab" data-tab="historico">Histórico</button>
+      </div>
+
+      <div class="msg" id="msgAcao"></div>
+
+      <!-- Adicionar -->
+      <div class="painel-aba" data-painel="adicionar">
+        <div class="campo"><label>Instrumento *</label><input id="addInstrumento" type="text"></div>
+        <div class="campo"><label>Tag</label><input id="addTag" type="text"></div>
+        <div class="campo"><label>Nº de série</label><input id="addSerie" type="text"></div>
+        <div class="campo"><label>Modelo</label><input id="addModelo" type="text"></div>
+        <div class="campo"><label>Marca</label><input id="addMarca" type="text"></div>
+        <div class="campo"><label>Data da aferição</label><input id="addAfericao" type="date"></div>
+        <div class="campo"><label>Data do vencimento</label><input id="addVencimento" type="date"></div>
+        <div class="campo"><label>Laboratório</label><input id="addLaboratorio" type="text"></div>
+        <div class="campo"><label>Certificado</label><input id="addCertificado" type="text"></div>
+        <div class="campo">
+          <label>Status</label>
+          <select id="addStatus"><option value="">—</option><option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option></select>
+        </div>
+        <div class="campo"><label>Inspetor</label><input id="addInspetor" type="text"></div>
+        <button class="btn-primario" id="btnAdicionar">Adicionar instrumento</button>
+      </div>
+
+      <!-- Reatribuir -->
+      <div class="painel-aba" data-painel="reatribuir" style="display:none;">
+        <div class="campo">
+          <label>Instrumento</label>
+          <select id="reatribuirSelect"></select>
+        </div>
+        <div class="campo"><label>Novo inspetor</label><input id="reatribuirInspetor" type="text" placeholder="Deixe vazio para remover atribuição"></div>
+        <button class="btn-primario" id="btnReatribuir">Salvar</button>
+      </div>
+
+      <!-- Status -->
+      <div class="painel-aba" data-painel="status" style="display:none;">
+        <div class="campo">
+          <label>Instrumento</label>
+          <select id="statusSelect"></select>
+        </div>
+        <div class="campo">
+          <label>Novo status</label>
+          <select id="statusNovo"><option value="">—</option><option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option></select>
+        </div>
+        <button class="btn-primario" id="btnStatus">Salvar</button>
+      </div>
+
+      <!-- Remover -->
+      <div class="painel-aba" data-painel="remover" style="display:none;">
+        <div class="campo">
+          <label>Instrumento</label>
+          <select id="removerSelect"></select>
+        </div>
+        <button class="btn-primario" id="btnRemover" style="background:var(--vermelho);">Remover instrumento</button>
+      </div>
+
+      <!-- Histórico -->
+      <div class="painel-aba" data-painel="historico" style="display:none;">
+        <div class="lista-simples" id="listaHistorico">
+          <div class="item-simples">Carregando histórico...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ CONFIGURAÇÃO ============ */
+const URL_API = 'https://script.google.com/macros/s/AKfycbzA_LJFaZtf2cWVXntr-qjIrWb6IuNjKGRszmU3MMQwoYal64jHcEJ5ftAmCcBCYKG3/exec';
+const DIAS_ALERTA = [30, 20, 10];
+
+/* ============ ESTADO ============ */
+let instrumentos = [];
+let sessao = null; // { usuario, senha, nome }
+let ordenacao = { coluna: null, asc: true };
+
+/* ============ UTIL ============ */
+function diasAte(dataStr){
+  if(!dataStr) return null;
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const alvo = new Date(dataStr + 'T00:00:00');
+  return Math.round((alvo - hoje) / 86400000);
+}
+function formatarData(dataStr){
+  if(!dataStr) return '<span class="sem-dado">N/C</span>';
+  const [a,m,d] = dataStr.split('-');
+  return `${d}/${m}/${a}`;
+}
+function classeVencimento(dias){
+  if(dias === null) return 'cinza';
+  if(dias < 0) return 'vermelho';
+  if(dias <= 10) return 'laranja';
+  if(dias <= 20) return 'amarelo';
+  if(dias <= 30) return 'verde_alerta_'; // tratado à parte no filtro
+  return 'verde';
+}
+function badgeVencimento(dias){
+  if(dias === null) return `<span class="badge cinza">sem data</span>`;
+  if(dias < 0) return `<span class="badge vermelho">Vencido há ${Math.abs(dias)}d</span>`;
+  if(dias <= 10) return `<span class="badge laranja">${dias}d restantes</span>`;
+  if(dias <= 20) return `<span class="badge amarelo">${dias}d restantes</span>`;
+  if(dias <= 30) return `<span class="badge amarelo">${dias}d restantes</span>`;
+  return `<span class="badge verde">${dias}d restantes</span>`;
+}
+
+/* ============ CARREGAR DADOS ============ */
+async function carregarInstrumentos(){
+  try{
+    const resp = await fetch(URL_API + '?action=list');
+    const json = await resp.json();
+    if(!json.ok) throw new Error(json.erro || 'Erro ao carregar dados.');
+    instrumentos = json.data;
+    renderizarBanner();
+    renderizarTabela();
+    preencherSelects();
+  }catch(err){
+    document.getElementById('corpoTabela').innerHTML =
+      `<tr><td colspan="11" class="rodape-carregando">Não foi possível carregar os dados. Verifique sua conexão. (${err.message})</td></tr>`;
+  }
+}
+
+/* ============ BANNER DE ALERTAS ============ */
+function renderizarBanner(){
+  const banner = document.getElementById('banner');
+  const vencidos = instrumentos.filter(i => diasAte(i['DATA DO VENCIMENTO']) !== null && diasAte(i['DATA DO VENCIMENTO']) < 0);
+  const ate10 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d >= 0 && d <= 10; });
+  const ate20 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 10 && d <= 20; });
+  const ate30 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 20 && d <= 30; });
+
+  let html = '';
+  if(vencidos.length){
+    html += `<div class="alerta vermelho"><span class="icone">⛔</span><span><b>${vencidos.length} instrumento(s) com calibração vencida.</b> Verifique antes de usar em campo.</span></div>`;
+  }
+  if(ate10.length){
+    html += `<div class="alerta laranja"><span class="icone">⚠️</span><span><b>${ate10.length} instrumento(s)</b> vencem em até 10 dias.</span></div>`;
+  }
+  if(ate20.length){
+    html += `<div class="alerta amarelo"><span class="icone">⏳</span><span><b>${ate20.length} instrumento(s)</b> vencem em até 20 dias.</span></div>`;
+  }
+  if(ate30.length){
+    html += `<div class="alerta amarelo"><span class="icone">🗓️</span><span><b>${ate30.length} instrumento(s)</b> vencem em até 30 dias.</span></div>`;
+  }
+  if(!html){
+    html = `<div class="alerta ok"><span class="icone">✅</span><span>Nenhum instrumento com vencimento nos próximos 30 dias.</span></div>`;
+  }
+  banner.innerHTML = html;
+}
+
+/* ============ TABELA ============ */
+function instrumentosFiltrados(){
+  const termo = document.getElementById('busca').value.trim().toLowerCase();
+  const filtroVenc = document.getElementById('filtroStatusVenc').value;
+  const filtroAtivo = document.getElementById('filtroAtivo').value;
+
+  return instrumentos.filter(i => {
+    if(filtroAtivo && (i.STATUS || '').toUpperCase() !== filtroAtivo) return false;
+
+    if(filtroVenc){
+      const dias = diasAte(i['DATA DO VENCIMENTO']);
+      if(filtroVenc === 'vermelho' && !(dias !== null && dias < 0)) return false;
+      if(filtroVenc === 'laranja' && !(dias !== null && dias >= 0 && dias <= 10)) return false;
+      if(filtroVenc === 'amarelo' && !(dias !== null && dias > 10 && dias <= 20)) return false;
+      if(filtroVenc === 'verde_alerta' && !(dias !== null && dias > 20 && dias <= 30)) return false;
+      if(filtroVenc === 'verde' && !(dias !== null && dias > 30)) return false;
+    }
+
+    if(!termo) return true;
+    const campos = ['INSTRUMENTO','TAG','Nº DE SERIE','MODELO','MARCA','LABORATÓRIO','CERTIFICADO','INSPETOR'];
+    return campos.some(c => String(i[c] || '').toLowerCase().includes(termo));
+  });
+}
+
+function renderizarTabela(){
+  let lista = instrumentosFiltrados();
+
+  if(ordenacao.coluna){
+    lista = [...lista].sort((a,b) => {
+      const va = String(a[ordenacao.coluna] || '').toLowerCase();
+      const vb = String(b[ordenacao.coluna] || '').toLowerCase();
+      if(va < vb) return ordenacao.asc ? -1 : 1;
+      if(va > vb) return ordenacao.asc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const corpo = document.getElementById('corpoTabela');
+  document.getElementById('contagem').textContent = `${lista.length} de ${instrumentos.length} instrumento(s)`;
+
+  if(!lista.length){
+    corpo.innerHTML = `<tr><td colspan="11" class="rodape-carregando">Nenhum instrumento encontrado com esse filtro.</td></tr>`;
+    return;
+  }
+
+  corpo.innerHTML = lista.map(i => {
+    const dias = diasAte(i['DATA DO VENCIMENTO']);
+    const statusHtml = i.STATUS === 'ATIVO' ? '<span class="status-ativo">● Ativo</span>'
+                      : i.STATUS === 'INATIVO' ? '<span class="status-inativo">● Inativo</span>'
+                      : '<span class="sem-dado">—</span>';
+    return `<tr>
+      <td>${i.INSTRUMENTO || ''}</td>
+      <td>${i.TAG || '<span class="sem-dado">N/C</span>'}</td>
+      <td>${i['Nº DE SERIE'] || '<span class="sem-dado">N/C</span>'}</td>
+      <td>${i.MODELO || '<span class="sem-dado">N/C</span>'}</td>
+      <td>${i.MARCA || ''}</td>
+      <td>${formatarData(i['DATA DA AFERIÇÃO'])}</td>
+      <td>${formatarData(i['DATA DO VENCIMENTO'])} ${badgeVencimento(dias)}</td>
+      <td>${i['LABORATÓRIO'] || ''}</td>
+      <td>${i.CERTIFICADO || ''}</td>
+      <td>${statusHtml}</td>
+      <td>${i.INSPETOR || '<span class="sem-dado">Não atribuído</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.querySelectorAll('thead th').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if(ordenacao.coluna === col) ordenacao.asc = !ordenacao.asc;
+    else { ordenacao.coluna = col; ordenacao.asc = true; }
+    renderizarTabela();
+  });
+});
+
+document.getElementById('busca').addEventListener('input', renderizarTabela);
+document.getElementById('filtroStatusVenc').addEventListener('change', renderizarTabela);
+document.getElementById('filtroAtivo').addEventListener('change', renderizarTabela);
+
+/* ============ PAINEL ADMIN: abrir/fechar ============ */
+const overlay = document.getElementById('overlay');
+const painel = document.getElementById('painelAdmin');
+
+function abrirPainel(){
+  overlay.style.display = 'block';
+  painel.style.display = 'block';
+}
+function fecharPainel(){
+  overlay.style.display = 'none';
+  painel.style.display = 'none';
+}
+document.getElementById('btnAdminToggle').addEventListener('click', abrirPainel);
+document.getElementById('fecharPainel').addEventListener('click', fecharPainel);
+overlay.addEventListener('click', fecharPainel);
+
+/* ============ LOGIN ============ */
+document.getElementById('btnLogin').addEventListener('click', async () => {
+  const usuario = document.getElementById('loginUsuario').value.trim();
+  const senha = document.getElementById('loginSenha').value;
+  const msgErro = document.getElementById('msgLoginErro');
+  msgErro.style.display = 'none';
+
+  if(!usuario || !senha){
+    msgErro.textContent = 'Preencha usuário e senha.';
+    msgErro.style.display = 'block';
+    return;
+  }
+
+  try{
+    const resp = await fetch(URL_API, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'login', usuario, senha })
+    });
+    const json = await resp.json();
+    if(!json.ok){
+      msgErro.textContent = json.erro || 'Não foi possível entrar.';
+      msgErro.style.display = 'block';
+      return;
+    }
+    sessao = { usuario, senha, nome: json.nome };
+    document.getElementById('nomeAdminLogado').textContent = sessao.nome;
+    document.getElementById('blocoLogin').style.display = 'none';
+    document.getElementById('blocoLogado').style.display = 'block';
+  }catch(err){
+    msgErro.textContent = 'Erro de conexão. Tente novamente.';
+    msgErro.style.display = 'block';
+  }
+});
+
+document.getElementById('btnSair').addEventListener('click', () => {
+  sessao = null;
+  document.getElementById('loginUsuario').value = '';
+  document.getElementById('loginSenha').value = '';
+  document.getElementById('blocoLogado').style.display = 'none';
+  document.getElementById('blocoLogin').style.display = 'block';
+});
+
+/* ============ TABS ============ */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('ativa'));
+    tab.classList.add('ativa');
+    const alvo = tab.dataset.tab;
+    document.querySelectorAll('.painel-aba').forEach(p => {
+      p.style.display = (p.dataset.painel === alvo) ? 'block' : 'none';
+    });
+    document.getElementById('msgAcao').style.display = 'none';
+    if(alvo === 'historico') carregarHistorico();
+  });
+});
+
+/* ============ SELECTS DE INSTRUMENTOS ============ */
+function preencherSelects(){
+  const opcoes = instrumentos
+    .map(i => `<option value="${i.ID}">${i.INSTRUMENTO} — ${i.TAG || 'N/C'} (ID ${i.ID})</option>`)
+    .join('');
+  ['reatribuirSelect','statusSelect','removerSelect'].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = opcoes;
+  });
+}
+
+/* ============ AÇÕES ADMIN ============ */
+function mostrarMsg(texto, tipo){
+  const msg = document.getElementById('msgAcao');
+  msg.textContent = texto;
+  msg.className = 'msg ' + tipo;
+  msg.style.display = 'block';
+}
+
+async function chamarApi(payload){
+  const resp = await fetch(URL_API, {
+    method: 'POST',
+    body: JSON.stringify({ ...payload, usuario: sessao.usuario, senha: sessao.senha })
+  });
+  return resp.json();
+}
+
+document.getElementById('btnAdicionar').addEventListener('click', async () => {
+  const nome = document.getElementById('addInstrumento').value.trim();
+  if(!nome){ mostrarMsg('Preencha o nome do instrumento.', 'erro'); return; }
+
+  const instrumento = {
+    INSTRUMENTO: nome,
+    TAG: document.getElementById('addTag').value.trim(),
+    'Nº DE SERIE': document.getElementById('addSerie').value.trim(),
+    MODELO: document.getElementById('addModelo').value.trim(),
+    MARCA: document.getElementById('addMarca').value.trim(),
+    'DATA DA AFERIÇÃO': document.getElementById('addAfericao').value,
+    'DATA DO VENCIMENTO': document.getElementById('addVencimento').value,
+    'LABORATÓRIO': document.getElementById('addLaboratorio').value.trim(),
+    CERTIFICADO: document.getElementById('addCertificado').value.trim(),
+    STATUS: document.getElementById('addStatus').value,
+    INSPETOR: document.getElementById('addInspetor').value.trim()
+  };
+
+  const json = await chamarApi({ action: 'addInstrument', instrumento });
+  if(json.ok){
+    mostrarMsg('Instrumento adicionado com sucesso.', 'sucesso');
+    document.querySelectorAll('#painel-aba-adicionar input').forEach(i => i.value = '');
+    ['addInstrumento','addTag','addSerie','addModelo','addMarca','addAfericao','addVencimento','addLaboratorio','addCertificado','addInspetor']
+      .forEach(id => document.getElementById(id).value = '');
+    document.getElementById('addStatus').value = '';
+    await carregarInstrumentos();
+  } else {
+    mostrarMsg(json.erro || 'Erro ao adicionar.', 'erro');
+  }
+});
+
+document.getElementById('btnReatribuir').addEventListener('click', async () => {
+  const id = document.getElementById('reatribuirSelect').value;
+  const inspetor = document.getElementById('reatribuirInspetor').value.trim();
+  const json = await chamarApi({ action: 'reassignInspector', id, inspetor });
+  if(json.ok){
+    mostrarMsg('Inspetor atualizado com sucesso.', 'sucesso');
+    document.getElementById('reatribuirInspetor').value = '';
+    await carregarInstrumentos();
+  } else {
+    mostrarMsg(json.erro || 'Erro ao reatribuir.', 'erro');
+  }
+});
+
+document.getElementById('btnStatus').addEventListener('click', async () => {
+  const id = document.getElementById('statusSelect').value;
+  const status = document.getElementById('statusNovo').value;
+  const json = await chamarApi({ action: 'updateStatus', id, status });
+  if(json.ok){
+    mostrarMsg('Status atualizado com sucesso.', 'sucesso');
+    await carregarInstrumentos();
+  } else {
+    mostrarMsg(json.erro || 'Erro ao atualizar status.', 'erro');
+  }
+});
+
+document.getElementById('btnRemover').addEventListener('click', async () => {
+  const id = document.getElementById('removerSelect').value;
+  const select = document.getElementById('removerSelect');
+  const nomeInstrumento = select.options[select.selectedIndex]?.text || '';
+  if(!confirm(`Remover "${nomeInstrumento}"? Essa ação não pode ser desfeita.`)) return;
+
+  const json = await chamarApi({ action: 'removeInstrument', id });
+  if(json.ok){
+    mostrarMsg('Instrumento removido com sucesso.', 'sucesso');
+    await carregarInstrumentos();
+  } else {
+    mostrarMsg(json.erro || 'Erro ao remover.', 'erro');
+  }
+});
+
+async function carregarHistorico(){
+  const lista = document.getElementById('listaHistorico');
+  lista.innerHTML = '<div class="item-simples">Carregando histórico...</div>';
+  const json = await chamarApi({ action: 'history' });
+  if(!json.ok){
+    lista.innerHTML = `<div class="item-simples">Erro ao carregar histórico.</div>`;
+    return;
+  }
+  if(!json.data.length){
+    lista.innerHTML = `<div class="item-simples">Nenhuma alteração registrada ainda.</div>`;
+    return;
+  }
+  lista.innerHTML = json.data.map(h => `
+    <div class="item-simples">
+      <div class="linha1">${h.acao.replace(/_/g,' ')}</div>
+      <div class="linha2">${h.detalhes}</div>
+      <div class="linha2">${h.admin} • ${h.data_hora}</div>
+    </div>
+  `).join('');
+}
+
+/* ============ INÍCIO ============ */
+carregarInstrumentos();
+</script>
+</body>
+</html>
