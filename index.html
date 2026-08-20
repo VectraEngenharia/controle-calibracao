@@ -395,15 +395,23 @@ let sessao = null; // { usuario, senha, nome }
 let ordenacao = { coluna: null, asc: true };
 
 /* ============ UTIL ============ */
-function diasAte(dataStr){
+function apenasData(dataStr){
+  // Aceita tanto "2025-10-23" quanto "2025-10-23T03:00:00.000Z" e devolve só "2025-10-23"
   if(!dataStr) return null;
+  const match = String(dataStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return match ? match[0] : null;
+}
+function diasAte(dataStr){
+  const data = apenasData(dataStr);
+  if(!data) return null;
   const hoje = new Date(); hoje.setHours(0,0,0,0);
-  const alvo = new Date(dataStr + 'T00:00:00');
+  const alvo = new Date(data + 'T00:00:00');
   return Math.round((alvo - hoje) / 86400000);
 }
 function formatarData(dataStr){
-  if(!dataStr) return '<span class="sem-dado">N/C</span>';
-  const [a,m,d] = dataStr.split('-');
+  const data = apenasData(dataStr);
+  if(!data) return '<span class="sem-dado">N/C</span>';
+  const [a,m,d] = data.split('-');
   return `${d}/${m}/${a}`;
 }
 function classeVencimento(dias){
