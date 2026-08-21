@@ -221,6 +221,60 @@
 
   .rodape-carregando{padding:40px;text-align:center;color:var(--texto-suave);font-size:.85rem;}
 
+  /* ---------- Navegação Dashboard / Tabela ---------- */
+  .nav-vistas{display:flex;gap:8px;}
+  .nav-vistas button{
+    background:transparent;border:1px solid #3A5772;color:#CFE0EF;
+    padding:8px 14px;border-radius:6px;cursor:pointer;font-size:.85rem;font-family:inherit;
+  }
+  .nav-vistas button:hover{background:#1C3853;}
+  .nav-vistas button.ativa{background:var(--branco);color:var(--azul-escuro);border-color:var(--branco);font-weight:600;}
+
+  /* ---------- Dashboard ---------- */
+  #viewTabela{display:none;}
+  .dash-titulo{font-size:1rem;font-weight:600;margin:4px 0 16px;color:var(--texto);}
+  .cards-resumo{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(160px,1fr));
+    gap:14px;
+    margin-bottom:26px;
+  }
+  .card-resumo{
+    background:var(--branco);border:1px solid var(--cinza-borda);border-radius:10px;
+    padding:18px 20px;
+  }
+  .card-resumo .valor{font-size:1.9rem;font-weight:700;font-family:'IBM Plex Mono',monospace;line-height:1;}
+  .card-resumo .rotulo{font-size:.78rem;color:var(--texto-suave);margin-top:6px;}
+  .card-resumo.total .valor{color:var(--azul);}
+  .card-resumo.ativos .valor{color:var(--verde);}
+  .card-resumo.inativos .valor{color:var(--texto-suave);}
+
+  .dash-secao{
+    background:var(--branco);border:1px solid var(--cinza-borda);border-radius:10px;
+    padding:6px 0;margin-bottom:20px;
+  }
+  .dash-secao-titulo{
+    font-size:.85rem;font-weight:600;color:var(--texto);
+    padding:14px 20px 10px;border-bottom:1px solid var(--cinza-borda);
+  }
+  .lista-tipos{max-height:420px;overflow-y:auto;}
+  .linha-tipo{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 20px;border-bottom:1px solid var(--cinza-borda);font-size:.85rem;
+  }
+  .linha-tipo:last-child{border-bottom:none;}
+  .linha-tipo .nome-tipo{color:var(--texto);}
+  .linha-tipo .qtd-tipo{
+    font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--azul);
+    background:var(--azul-claro);padding:2px 10px;border-radius:20px;font-size:.78rem;
+  }
+  .btn-ver-tabela{
+    display:inline-block;margin-top:4px;background:var(--azul);color:var(--branco);
+    border:none;padding:11px 20px;border-radius:7px;font-size:.88rem;font-weight:600;
+    cursor:pointer;font-family:inherit;
+  }
+  .btn-ver-tabela:hover{background:#193F63;}
+
   @media (max-width:640px){
     header{padding:14px 16px;}
     main{padding:14px 12px 40px;}
@@ -235,51 +289,76 @@
     <h1>Controle de Calibração de Instrumentos</h1>
     <div class="sub">Obra • acompanhamento de certificados e responsáveis</div>
   </div>
-  <button id="btnAdminToggle">Área do administrador</button>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div class="nav-vistas">
+      <button id="btnVerDashboard" class="ativa">Dashboard</button>
+      <button id="btnVerTabela">Tabela</button>
+    </div>
+    <button id="btnAdminToggle">Área do administrador</button>
+  </div>
 </header>
 
 <main>
   <div id="banner"></div>
 
-  <div class="toolbar">
-    <input id="busca" type="text" placeholder="Pesquisar por instrumento, tag, nº de série, inspetor...">
-    <select id="filtroStatusVenc" class="filtro">
-      <option value="">Todos os vencimentos</option>
-      <option value="vermelho">Vencidos</option>
-      <option value="laranja">≤ 10 dias</option>
-      <option value="amarelo">≤ 20 dias</option>
-      <option value="verde_alerta">≤ 30 dias</option>
-      <option value="verde">Dentro do prazo</option>
-    </select>
-    <select id="filtroAtivo" class="filtro">
-      <option value="">Ativos e inativos</option>
-      <option value="ATIVO">Somente ativos</option>
-      <option value="INATIVO">Somente inativos</option>
-    </select>
-    <span class="contagem" id="contagem"></span>
+  <!-- ===== TELA: DASHBOARD ===== -->
+  <div id="viewDashboard">
+    <div class="cards-resumo">
+      <div class="card-resumo total"><div class="valor" id="cardTotal">–</div><div class="rotulo">Total de instrumentos</div></div>
+      <div class="card-resumo ativos"><div class="valor" id="cardAtivos">–</div><div class="rotulo">Ativos</div></div>
+      <div class="card-resumo inativos"><div class="valor" id="cardInativos">–</div><div class="rotulo">Inativos</div></div>
+    </div>
+
+    <div class="dash-secao">
+      <div class="dash-secao-titulo">Quantidade por tipo de instrumento</div>
+      <div class="lista-tipos" id="listaTipos"></div>
+    </div>
+
+    <button class="btn-ver-tabela" id="btnIrTabela">Ver tabela completa →</button>
   </div>
 
-  <div class="tabela-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th data-col="INSTRUMENTO">Instrumento</th>
-          <th data-col="TAG">Tag</th>
-          <th data-col="Nº DE SERIE">Nº Série</th>
-          <th data-col="MODELO">Modelo</th>
-          <th data-col="MARCA">Marca</th>
-          <th data-col="DATA DA AFERIÇÃO">Aferição</th>
-          <th data-col="DATA DO VENCIMENTO">Vencimento</th>
-          <th data-col="LABORATÓRIO">Laboratório</th>
-          <th data-col="CERTIFICADO">Certificado</th>
-          <th data-col="STATUS">Status</th>
-          <th data-col="INSPETOR">Inspetor</th>
-        </tr>
-      </thead>
-      <tbody id="corpoTabela">
-        <tr><td colspan="11" class="rodape-carregando">Carregando instrumentos...</td></tr>
-      </tbody>
-    </table>
+  <!-- ===== TELA: TABELA ===== -->
+  <div id="viewTabela">
+    <div class="toolbar">
+      <input id="busca" type="text" placeholder="Pesquisar por instrumento, tag, nº de série, inspetor...">
+      <select id="filtroStatusVenc" class="filtro">
+        <option value="">Todos os vencimentos</option>
+        <option value="vermelho">Vencidos</option>
+        <option value="laranja">≤ 10 dias</option>
+        <option value="amarelo">≤ 20 dias</option>
+        <option value="verde_alerta">≤ 30 dias</option>
+        <option value="verde">Dentro do prazo</option>
+      </select>
+      <select id="filtroAtivo" class="filtro">
+        <option value="">Ativos e inativos</option>
+        <option value="ATIVO">Somente ativos</option>
+        <option value="INATIVO">Somente inativos</option>
+      </select>
+      <span class="contagem" id="contagem"></span>
+    </div>
+
+    <div class="tabela-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th data-col="INSTRUMENTO">Instrumento</th>
+            <th data-col="TAG">Tag</th>
+            <th data-col="Nº DE SERIE">Nº Série</th>
+            <th data-col="MODELO">Modelo</th>
+            <th data-col="MARCA">Marca</th>
+            <th data-col="DATA DA AFERIÇÃO">Aferição</th>
+            <th data-col="DATA DO VENCIMENTO">Vencimento</th>
+            <th data-col="LABORATÓRIO">Laboratório</th>
+            <th data-col="CERTIFICADO">Certificado</th>
+            <th data-col="STATUS">Status</th>
+            <th data-col="INSPETOR">Inspetor</th>
+          </tr>
+        </thead>
+        <tbody id="corpoTabela">
+          <tr><td colspan="11" class="rodape-carregando">Carregando instrumentos...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </main>
 
@@ -440,6 +519,7 @@ async function carregarInstrumentos(){
     instrumentos = json.data;
     renderizarBanner();
     renderizarTabela();
+    renderizarDashboard();
     preencherSelects();
   }catch(err){
     document.getElementById('corpoTabela').innerHTML =
@@ -743,6 +823,48 @@ async function carregarHistorico(){
     </div>
   `).join('');
 }
+
+/* ============ DASHBOARD ============ */
+function renderizarDashboard(){
+  const total = instrumentos.length;
+  const ativos = instrumentos.filter(i => (i.STATUS || '').toUpperCase() === 'ATIVO').length;
+  const inativos = instrumentos.filter(i => (i.STATUS || '').toUpperCase() === 'INATIVO').length;
+
+  document.getElementById('cardTotal').textContent = total;
+  document.getElementById('cardAtivos').textContent = ativos;
+  document.getElementById('cardInativos').textContent = inativos;
+
+  const porTipo = {};
+  instrumentos.forEach(i => {
+    const nome = i.INSTRUMENTO || 'Sem nome';
+    porTipo[nome] = (porTipo[nome] || 0) + 1;
+  });
+  const listaOrdenada = Object.entries(porTipo).sort((a,b) => b[1] - a[1]);
+
+  document.getElementById('listaTipos').innerHTML = listaOrdenada.map(([nome, qtd]) => `
+    <div class="linha-tipo">
+      <span class="nome-tipo">${nome}</span>
+      <span class="qtd-tipo">${qtd}</span>
+    </div>
+  `).join('');
+}
+
+/* ============ NAVEGAÇÃO ENTRE TELAS ============ */
+function mostrarDashboard(){
+  document.getElementById('viewDashboard').style.display = 'block';
+  document.getElementById('viewTabela').style.display = 'none';
+  document.getElementById('btnVerDashboard').classList.add('ativa');
+  document.getElementById('btnVerTabela').classList.remove('ativa');
+}
+function mostrarTabela(){
+  document.getElementById('viewDashboard').style.display = 'none';
+  document.getElementById('viewTabela').style.display = 'block';
+  document.getElementById('btnVerTabela').classList.add('ativa');
+  document.getElementById('btnVerDashboard').classList.remove('ativa');
+}
+document.getElementById('btnVerDashboard').addEventListener('click', mostrarDashboard);
+document.getElementById('btnVerTabela').addEventListener('click', mostrarTabela);
+document.getElementById('btnIrTabela').addEventListener('click', mostrarTabela);
 
 /* ============ INÍCIO ============ */
 carregarInstrumentos();
