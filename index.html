@@ -466,6 +466,7 @@
       <div class="admin-acao-card" data-tab="adicionar"><div class="icone-acao">＋</div><div class="rotulo-acao">Adicionar instrumento</div></div>
       <div class="admin-acao-card" data-tab="reatribuir"><div class="icone-acao">🔄</div><div class="rotulo-acao">Reatribuir inspetor</div></div>
       <div class="admin-acao-card" data-tab="status"><div class="icone-acao">●</div><div class="rotulo-acao">Atualizar status</div></div>
+      <div class="admin-acao-card" data-tab="certificado"><div class="icone-acao">📄</div><div class="rotulo-acao">Certificado (PDF)</div></div>
       <div class="admin-acao-card" data-tab="remover"><div class="icone-acao">🗑</div><div class="rotulo-acao">Remover instrumento</div></div>
       <div class="admin-acao-card" data-tab="historico"><div class="icone-acao">🕒</div><div class="rotulo-acao">Histórico de alterações</div></div>
     </div>
@@ -574,6 +575,7 @@
         <button class="tab ativa" data-tab="adicionar">Adicionar</button>
         <button class="tab" data-tab="reatribuir">Reatribuir inspetor</button>
         <button class="tab" data-tab="status">Status</button>
+        <button class="tab" data-tab="certificado">Certificado (PDF)</button>
         <button class="tab" data-tab="remover">Remover</button>
         <button class="tab" data-tab="historico">Histórico</button>
       </div>
@@ -591,6 +593,10 @@
         <div class="campo"><label>Data do vencimento</label><input id="addVencimento" type="date"></div>
         <div class="campo"><label>Laboratório</label><input id="addLaboratorio" type="text"></div>
         <div class="campo"><label>Certificado</label><input id="addCertificado" type="text"></div>
+        <div class="campo">
+          <label>PDF do certificado (opcional)</label>
+          <input id="addCertificadoArquivo" type="file" accept="application/pdf">
+        </div>
         <div class="campo">
           <label>Status</label>
           <select id="addStatus"><option value="">—</option><option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option></select>
@@ -620,6 +626,25 @@
           <select id="statusNovo"><option value="">—</option><option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option></select>
         </div>
         <button class="btn-primario" id="btnStatus">Salvar</button>
+      </div>
+
+      <!-- Certificado (PDF) -->
+      <div class="painel-aba" data-painel="certificado" style="display:none;">
+        <div class="campo">
+          <label>Instrumento</label>
+          <select id="certificadoSelect"></select>
+        </div>
+        <div id="certificadoLinkAtual" style="font-size:.78rem;margin-bottom:12px;"></div>
+        <div class="campo">
+          <label>Enviar PDF do certificado</label>
+          <input id="certificadoArquivo" type="file" accept="application/pdf">
+        </div>
+        <button class="btn-primario" id="btnEnviarCertificado">Enviar PDF</button>
+
+        <div style="border-top:1px solid var(--cinza-borda);margin:18px 0 14px;"></div>
+
+        <div class="campo"><label>Ou colar um link já existente</label><input id="certificadoLink" type="text" placeholder="https://drive.google.com/..."></div>
+        <button class="btn-secundario" id="btnCertificado">Salvar link manualmente</button>
       </div>
 
       <!-- Remover -->
@@ -928,10 +953,11 @@ function preencherSelects(){
   const opcoes = instrumentos
     .map(i => `<option value="${i.ID}">${i.INSTRUMENTO} — ${i.TAG || 'N/C'} (ID ${i.ID})</option>`)
     .join('');
-  ['reatribuirSelect','statusSelect','removerSelect'].forEach(id => {
+  ['reatribuirSelect','statusSelect','removerSelect','certificadoSelect'].forEach(id => {
     const sel = document.getElementById(id);
     sel.innerHTML = opcoes;
   });
+  document.getElementById('certificadoSelect').dispatchEvent(new Event('change'));
 }
 
 /* ============ AÇÕES ADMIN ============ */
@@ -950,9 +976,24 @@ async function chamarApi(payload){
   return resp.json();
 }
 
+function lerArquivoComoBase64(arquivo){
+  return new Promise((resolve, reject) => {
+    const leitor = new FileReader();
+    leitor.onload = () => {
+      // resultado vem como "data:application/pdf;base64,XXXXX" — pegamos só a parte depois da vírgula
+      const base64 = leitor.result.split(',')[1];
+      resolve(base64);
+    };
+    leitor.onerror = reject;
+    leitor.readAsDataURL(arquivo);
+  });
+}
+
 document.getElementById('btnAdicionar').addEventListener('click', async () => {
   const nome = document.getElementById('addInstrumento').value.trim();
   if(!nome){ mostrarMsg('Preencha o nome do instrumento.', 'erro'); return; }
+
+  const arquivoPdf = document.getElementById('addCertificadoArquivo').files[0];
 
   const instrumento = {
     INSTRUMENTO: nome,
@@ -968,16 +1009,37 @@ document.getElementById('btnAdicionar').addEventListener('click', async () => {
     INSPETOR: document.getElementById('addInspetor').value.trim()
   };
 
-  const json = await chamarApi({ action: 'addInstrument', instrumento });
-  if(json.ok){
+  const btn = document.getElementById('btnAdicionar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try{
+    const json = await chamarApi({ action: 'addInstrument', instrumento });
+    if(!json.ok){
+      mostrarMsg(json.erro || 'Erro ao adicionar.', 'erro');
+      return;
+    }
+
+    if(arquivoPdf){
+      btn.textContent = 'Enviando PDF...';
+      const conteudoBase64 = await lerArquivoComoBase64(arquivoPdf);
+      const jsonUpload = await chamarApi({ action: 'uploadCertificado', id: json.id, conteudoBase64 });
+      if(!jsonUpload.ok){
+        mostrarMsg('Instrumento adicionado, mas houve erro ao enviar o PDF: ' + (jsonUpload.erro || ''), 'erro');
+        await carregarInstrumentos();
+        return;
+      }
+    }
+
     mostrarMsg('Instrumento adicionado com sucesso.', 'sucesso');
-    document.querySelectorAll('#painel-aba-adicionar input').forEach(i => i.value = '');
     ['addInstrumento','addTag','addSerie','addModelo','addMarca','addAfericao','addVencimento','addLaboratorio','addCertificado','addInspetor']
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('addStatus').value = '';
+    document.getElementById('addCertificadoArquivo').value = '';
     await carregarInstrumentos();
-  } else {
-    mostrarMsg(json.erro || 'Erro ao adicionar.', 'erro');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Adicionar instrumento';
   }
 });
 
@@ -1003,6 +1065,55 @@ document.getElementById('btnStatus').addEventListener('click', async () => {
     await carregarInstrumentos();
   } else {
     mostrarMsg(json.erro || 'Erro ao atualizar status.', 'erro');
+  }
+});
+
+document.getElementById('certificadoSelect').addEventListener('change', () => {
+  const id = document.getElementById('certificadoSelect').value;
+  const instrumento = instrumentos.find(i => String(i.ID) === String(id));
+  const link = (instrumento && instrumento.LINK_CERTIFICADO) || '';
+  document.getElementById('certificadoLink').value = link;
+  document.getElementById('certificadoLinkAtual').innerHTML = link
+    ? `Certificado atual: <a href="${link}" target="_blank" rel="noopener" style="color:var(--azul);">ver PDF</a>`
+    : '<span style="color:var(--texto-suave);">Nenhum certificado enviado ainda para este instrumento.</span>';
+});
+
+document.getElementById('btnEnviarCertificado').addEventListener('click', async () => {
+  const id = document.getElementById('certificadoSelect').value;
+  const arquivo = document.getElementById('certificadoArquivo').files[0];
+  if(!arquivo){ mostrarMsg('Escolha um arquivo PDF antes de enviar.', 'erro'); return; }
+
+  const btn = document.getElementById('btnEnviarCertificado');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try{
+    const conteudoBase64 = await lerArquivoComoBase64(arquivo);
+    const json = await chamarApi({ action: 'uploadCertificado', id, conteudoBase64 });
+    if(json.ok){
+      mostrarMsg('PDF enviado com sucesso.', 'sucesso');
+      document.getElementById('certificadoArquivo').value = '';
+      await carregarInstrumentos();
+      document.getElementById('certificadoSelect').dispatchEvent(new Event('change'));
+    } else {
+      mostrarMsg(json.erro || 'Erro ao enviar o PDF.', 'erro');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Enviar PDF';
+  }
+});
+
+document.getElementById('btnCertificado').addEventListener('click', async () => {
+  const id = document.getElementById('certificadoSelect').value;
+  const link = document.getElementById('certificadoLink').value.trim();
+  const json = await chamarApi({ action: 'updateCertLink', id, link });
+  if(json.ok){
+    mostrarMsg('Link do certificado salvo com sucesso.', 'sucesso');
+    await carregarInstrumentos();
+    document.getElementById('certificadoSelect').dispatchEvent(new Event('change'));
+  } else {
+    mostrarMsg(json.erro || 'Erro ao salvar o link.', 'erro');
   }
 });
 
