@@ -818,7 +818,7 @@ function renderizarTabela(){
       <td>${formatarData(i['DATA DA AFERIÇÃO'])}</td>
       <td>${formatarData(i['DATA DO VENCIMENTO'])} ${badgeVencimento(dias)}</td>
       <td>${i['LABORATÓRIO'] || ''}</td>
-      <td>${i.CERTIFICADO || ''}</td>
+      <td>${i.CERTIFICADO ? (i.LINK_CERTIFICADO ? `<a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600;">${i.CERTIFICADO} 📄</a>` : i.CERTIFICADO) : ''}</td>
       <td>${statusHtml}</td>
       <td>${i.INSPETOR || '<span class="sem-dado">Não atribuído</span>'}</td>
     </tr>`;
@@ -1278,6 +1278,7 @@ function abrirModalTipo(nomeTipo){
           <span>Vencimento: ${formatarData(i['DATA DO VENCIMENTO'])}</span>
           <span>Inspetor: ${i.INSPETOR || 'Não atribuído'}</span>
           <span>Status: ${i.STATUS || '—'}</span>
+          ${i.LINK_CERTIFICADO ? `<span><a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600;">Ver certificado (PDF) 📄</a></span>` : ''}
         </div>
       </div>
     `;
