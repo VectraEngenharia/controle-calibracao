@@ -455,15 +455,21 @@
 
   <!-- ===== TELA: INÍCIO DO ADMINISTRADOR ===== -->
   <div id="viewAdminHome">
+    <div class="toolbar" style="margin-bottom:20px;">
+      <input id="buscaAdminHome" type="text" placeholder="Pesquisar instrumento, tag, nº de série, inspetor...">
+      <button class="gate-btn primario" id="btnBuscaAdminHome" style="padding:10px 18px;">Buscar</button>
+    </div>
+
     <div class="admin-stats">
-      <div class="admin-stat-card tot"><div class="valor" id="adminCardTotal">–</div><div class="rotulo">Total de instrumentos</div></div>
-      <div class="admin-stat-card venc"><div class="valor" id="adminCardVencidos">–</div><div class="rotulo">Instrumentos vencidos</div></div>
-      <div class="admin-stat-card prox"><div class="valor" id="adminCardProximos">–</div><div class="rotulo">Vencendo em até 30 dias</div></div>
+      <div class="admin-stat-card tot" id="cardIrTotal" style="cursor:pointer;"><div class="valor" id="adminCardTotal">–</div><div class="rotulo">Total de instrumentos</div></div>
+      <div class="admin-stat-card venc" id="cardIrVencidos" style="cursor:pointer;"><div class="valor" id="adminCardVencidos">–</div><div class="rotulo">Instrumentos vencidos</div></div>
+      <div class="admin-stat-card prox" id="cardIrProximos" style="cursor:pointer;"><div class="valor" id="adminCardProximos">–</div><div class="rotulo">Vencendo em até 30 dias</div></div>
     </div>
 
     <div class="admin-acoes-titulo">Ações administrativas</div>
     <div class="admin-acoes">
       <div class="admin-acao-card" data-tab="adicionar"><div class="icone-acao">＋</div><div class="rotulo-acao">Adicionar instrumento</div></div>
+      <div class="admin-acao-card" data-tab="editar"><div class="icone-acao">✎</div><div class="rotulo-acao">Editar instrumento</div></div>
       <div class="admin-acao-card" data-tab="reatribuir"><div class="icone-acao">🔄</div><div class="rotulo-acao">Reatribuir inspetor</div></div>
       <div class="admin-acao-card" data-tab="status"><div class="icone-acao">●</div><div class="rotulo-acao">Atualizar status</div></div>
       <div class="admin-acao-card" data-tab="certificado"><div class="icone-acao">📄</div><div class="rotulo-acao">Certificado (PDF)</div></div>
@@ -474,6 +480,11 @@
 
   <!-- ===== TELA: DASHBOARD ===== -->
   <div id="viewDashboard">
+    <div class="toolbar" style="margin-bottom:20px;">
+      <input id="buscaDashboard" type="text" placeholder="Pesquisar instrumento, tag, nº de série, inspetor...">
+      <button class="gate-btn primario" id="btnBuscaDashboard" style="padding:10px 18px;">Buscar</button>
+    </div>
+
     <div class="cards-resumo">
       <div class="card-resumo total"><div class="valor" id="cardTotal">–</div><div class="rotulo">Total de instrumentos</div></div>
       <div class="card-resumo ativos"><div class="valor" id="cardAtivos">–</div><div class="rotulo">Ativos</div></div>
@@ -513,6 +524,7 @@
         <option value="laranja">≤ 10 dias</option>
         <option value="amarelo">≤ 20 dias</option>
         <option value="verde_alerta">≤ 30 dias</option>
+        <option value="ate30_total">Vencendo em até 30 dias (todos)</option>
         <option value="verde">Dentro do prazo</option>
       </select>
       <select id="filtroAtivo" class="filtro">
@@ -573,6 +585,7 @@
 
       <div class="tabs">
         <button class="tab ativa" data-tab="adicionar">Adicionar</button>
+        <button class="tab" data-tab="editar">Editar instrumento</button>
         <button class="tab" data-tab="reatribuir">Reatribuir inspetor</button>
         <button class="tab" data-tab="status">Status</button>
         <button class="tab" data-tab="certificado">Certificado (PDF)</button>
@@ -603,6 +616,24 @@
         </div>
         <div class="campo"><label>Inspetor</label><input id="addInspetor" type="text"></div>
         <button class="btn-primario" id="btnAdicionar">Adicionar instrumento</button>
+      </div>
+
+      <!-- Editar -->
+      <div class="painel-aba" data-painel="editar" style="display:none;">
+        <div class="campo">
+          <label>Instrumento</label>
+          <select id="editarSelect"></select>
+        </div>
+        <div class="campo"><label>Instrumento *</label><input id="editInstrumento" type="text"></div>
+        <div class="campo"><label>Tag</label><input id="editTag" type="text"></div>
+        <div class="campo"><label>Nº de série</label><input id="editSerie" type="text"></div>
+        <div class="campo"><label>Modelo</label><input id="editModelo" type="text"></div>
+        <div class="campo"><label>Marca</label><input id="editMarca" type="text"></div>
+        <div class="campo"><label>Data da aferição</label><input id="editAfericao" type="date"></div>
+        <div class="campo"><label>Data do vencimento</label><input id="editVencimento" type="date"></div>
+        <div class="campo"><label>Laboratório</label><input id="editLaboratorio" type="text"></div>
+        <div class="campo"><label>Certificado</label><input id="editCertificado" type="text"></div>
+        <button class="btn-primario" id="btnEditar">Salvar alterações</button>
       </div>
 
       <!-- Reatribuir -->
@@ -739,6 +770,7 @@ function renderizarBanner(){
   const ate10 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d >= 0 && d <= 10; });
   const ate20 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 10 && d <= 20; });
   const ate30 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 20 && d <= 30; });
+  const ate60 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 30 && d <= 60; });
 
   let html = '';
   if(vencidos.length){
@@ -753,8 +785,11 @@ function renderizarBanner(){
   if(ate30.length){
     html += `<div class="alerta amarelo"><span class="icone">🗓️</span><span><b>${ate30.length} instrumento(s)</b> vencem em até 30 dias.</span></div>`;
   }
+  if(ate60.length){
+    html += `<div class="alerta ok"><span class="icone">📅</span><span><b>${ate60.length} instrumento(s)</b> vencem em até 60 dias.</span></div>`;
+  }
   if(!html){
-    html = `<div class="alerta ok"><span class="icone">✅</span><span>Nenhum instrumento com vencimento nos próximos 30 dias.</span></div>`;
+    html = `<div class="alerta ok"><span class="icone">✅</span><span>Nenhum instrumento com vencimento nos próximos 60 dias.</span></div>`;
   }
   banner.innerHTML = html;
 }
@@ -774,6 +809,7 @@ function instrumentosFiltrados(){
       if(filtroVenc === 'laranja' && !(dias !== null && dias >= 0 && dias <= 10)) return false;
       if(filtroVenc === 'amarelo' && !(dias !== null && dias > 10 && dias <= 20)) return false;
       if(filtroVenc === 'verde_alerta' && !(dias !== null && dias > 20 && dias <= 30)) return false;
+      if(filtroVenc === 'ate30_total' && !(dias !== null && dias >= 0 && dias <= 30)) return false;
       if(filtroVenc === 'verde' && !(dias !== null && dias > 30)) return false;
     }
 
@@ -953,11 +989,12 @@ function preencherSelects(){
   const opcoes = instrumentos
     .map(i => `<option value="${i.ID}">${i.INSTRUMENTO} — ${i.TAG || 'N/C'} (ID ${i.ID})</option>`)
     .join('');
-  ['reatribuirSelect','statusSelect','removerSelect','certificadoSelect'].forEach(id => {
+  ['reatribuirSelect','statusSelect','removerSelect','certificadoSelect','editarSelect'].forEach(id => {
     const sel = document.getElementById(id);
     sel.innerHTML = opcoes;
   });
   document.getElementById('certificadoSelect').dispatchEvent(new Event('change'));
+  document.getElementById('editarSelect').dispatchEvent(new Event('change'));
 }
 
 /* ============ AÇÕES ADMIN ============ */
@@ -1065,6 +1102,47 @@ document.getElementById('btnStatus').addEventListener('click', async () => {
     await carregarInstrumentos();
   } else {
     mostrarMsg(json.erro || 'Erro ao atualizar status.', 'erro');
+  }
+});
+
+document.getElementById('editarSelect').addEventListener('change', () => {
+  const id = document.getElementById('editarSelect').value;
+  const i = instrumentos.find(x => String(x.ID) === String(id));
+  if(!i) return;
+  document.getElementById('editInstrumento').value = i.INSTRUMENTO || '';
+  document.getElementById('editTag').value = i.TAG || '';
+  document.getElementById('editSerie').value = i['Nº DE SERIE'] || '';
+  document.getElementById('editModelo').value = i.MODELO || '';
+  document.getElementById('editMarca').value = i.MARCA || '';
+  document.getElementById('editAfericao').value = apenasData(i['DATA DA AFERIÇÃO']) || '';
+  document.getElementById('editVencimento').value = apenasData(i['DATA DO VENCIMENTO']) || '';
+  document.getElementById('editLaboratorio').value = i['LABORATÓRIO'] || '';
+  document.getElementById('editCertificado').value = i.CERTIFICADO || '';
+});
+
+document.getElementById('btnEditar').addEventListener('click', async () => {
+  const id = document.getElementById('editarSelect').value;
+  const nome = document.getElementById('editInstrumento').value.trim();
+  if(!nome){ mostrarMsg('Preencha o nome do instrumento.', 'erro'); return; }
+
+  const instrumento = {
+    INSTRUMENTO: nome,
+    TAG: document.getElementById('editTag').value.trim(),
+    'Nº DE SERIE': document.getElementById('editSerie').value.trim(),
+    MODELO: document.getElementById('editModelo').value.trim(),
+    MARCA: document.getElementById('editMarca').value.trim(),
+    'DATA DA AFERIÇÃO': document.getElementById('editAfericao').value,
+    'DATA DO VENCIMENTO': document.getElementById('editVencimento').value,
+    'LABORATÓRIO': document.getElementById('editLaboratorio').value.trim(),
+    CERTIFICADO: document.getElementById('editCertificado').value.trim()
+  };
+
+  const json = await chamarApi({ action: 'editInstrument', id, instrumento });
+  if(json.ok){
+    mostrarMsg('Instrumento atualizado com sucesso.', 'sucesso');
+    await carregarInstrumentos();
+  } else {
+    mostrarMsg(json.erro || 'Erro ao editar.', 'erro');
   }
 });
 
@@ -1328,6 +1406,33 @@ document.getElementById('btnVerAdminHome').addEventListener('click', mostrarAdmi
 document.getElementById('btnVerDashboard').addEventListener('click', mostrarDashboard);
 document.getElementById('btnVerTabela').addEventListener('click', mostrarTabela);
 document.getElementById('btnIrTabela').addEventListener('click', mostrarTabela);
+
+/* ============ IR PARA A TABELA COM BUSCA/FILTRO PRÉ-APLICADOS ============ */
+function irParaTabelaCom({ termo = '', filtroVenc = '', filtroAtivo = '' } = {}){
+  document.getElementById('busca').value = termo;
+  document.getElementById('filtroStatusVenc').value = filtroVenc;
+  document.getElementById('filtroAtivo').value = filtroAtivo;
+  mostrarTabela();
+  renderizarTabela();
+}
+
+document.getElementById('btnBuscaAdminHome').addEventListener('click', () => {
+  irParaTabelaCom({ termo: document.getElementById('buscaAdminHome').value.trim() });
+});
+document.getElementById('buscaAdminHome').addEventListener('keydown', e => {
+  if(e.key === 'Enter') document.getElementById('btnBuscaAdminHome').click();
+});
+
+document.getElementById('btnBuscaDashboard').addEventListener('click', () => {
+  irParaTabelaCom({ termo: document.getElementById('buscaDashboard').value.trim() });
+});
+document.getElementById('buscaDashboard').addEventListener('keydown', e => {
+  if(e.key === 'Enter') document.getElementById('btnBuscaDashboard').click();
+});
+
+document.getElementById('cardIrTotal').addEventListener('click', () => irParaTabelaCom({}));
+document.getElementById('cardIrVencidos').addEventListener('click', () => irParaTabelaCom({ filtroVenc: 'vermelho' }));
+document.getElementById('cardIrProximos').addEventListener('click', () => irParaTabelaCom({ filtroVenc: 'ate30_total' }));
 
 /* ============ INÍCIO ============ */
 carregarInstrumentos();
