@@ -95,7 +95,7 @@
     align-items:center;
     margin-bottom:14px;
   }
-  #busca{
+  #busca, .busca-estilo-tabela{
     flex:1 1 260px;
     padding:10px 14px;
     border:1px solid var(--cinza-borda);
@@ -456,8 +456,8 @@
   <!-- ===== TELA: INÍCIO DO ADMINISTRADOR ===== -->
   <div id="viewAdminHome">
     <div class="toolbar" style="margin-bottom:20px;">
-      <input id="buscaAdminHome" type="text" placeholder="Pesquisar instrumento, tag, nº de série, inspetor...">
-      <button class="gate-btn primario" id="btnBuscaAdminHome" style="padding:10px 18px;">Buscar</button>
+      <input id="buscaAdminHome" class="busca-estilo-tabela" type="text" placeholder="Pesquisar instrumento, tag, nº de série, inspetor...">
+      <button class="btn-ver-tabela" id="btnBuscaAdminHome" style="margin-top:0;">Buscar</button>
     </div>
 
     <div class="admin-stats">
@@ -481,14 +481,14 @@
   <!-- ===== TELA: DASHBOARD ===== -->
   <div id="viewDashboard">
     <div class="toolbar" style="margin-bottom:20px;">
-      <input id="buscaDashboard" type="text" placeholder="Pesquisar instrumento, tag, nº de série, inspetor...">
-      <button class="gate-btn primario" id="btnBuscaDashboard" style="padding:10px 18px;">Buscar</button>
+      <input id="buscaDashboard" class="busca-estilo-tabela" type="text" placeholder="Pesquisar instrumento, tag, nº de série, inspetor...">
+      <button class="btn-ver-tabela" id="btnBuscaDashboard" style="margin-top:0;">Buscar</button>
     </div>
 
     <div class="cards-resumo">
-      <div class="card-resumo total"><div class="valor" id="cardTotal">–</div><div class="rotulo">Total de instrumentos</div></div>
-      <div class="card-resumo ativos"><div class="valor" id="cardAtivos">–</div><div class="rotulo">Ativos</div></div>
-      <div class="card-resumo inativos"><div class="valor" id="cardInativos">–</div><div class="rotulo">Inativos</div></div>
+      <div class="card-resumo total" id="cardResumoIrTotal" style="cursor:pointer;"><div class="valor" id="cardTotal">–</div><div class="rotulo">Total de instrumentos</div></div>
+      <div class="card-resumo ativos" id="cardResumoIrAtivos" style="cursor:pointer;"><div class="valor" id="cardAtivos">–</div><div class="rotulo">Ativos</div></div>
+      <div class="card-resumo inativos" id="cardResumoIrInativos" style="cursor:pointer;"><div class="valor" id="cardInativos">–</div><div class="rotulo">Inativos</div></div>
     </div>
 
     <div class="dash-grid">
@@ -525,6 +525,8 @@
         <option value="amarelo">≤ 20 dias</option>
         <option value="verde_alerta">≤ 30 dias</option>
         <option value="ate30_total">Vencendo em até 30 dias (todos)</option>
+        <option value="ate60">Vence em 31 a 60 dias</option>
+        <option value="semdata">Sem data de vencimento</option>
         <option value="verde">Dentro do prazo</option>
       </select>
       <select id="filtroAtivo" class="filtro">
@@ -774,24 +776,29 @@ function renderizarBanner(){
 
   let html = '';
   if(vencidos.length){
-    html += `<div class="alerta vermelho"><span class="icone">⛔</span><span><b>${vencidos.length} instrumento(s) com calibração vencida.</b> Verifique antes de usar em campo.</span></div>`;
+    html += `<div class="alerta vermelho" data-filtro="vermelho"><span class="icone">⛔</span><span><b>${vencidos.length} instrumento(s) com calibração vencida.</b> Verifique antes de usar em campo.</span></div>`;
   }
   if(ate10.length){
-    html += `<div class="alerta laranja"><span class="icone">⚠️</span><span><b>${ate10.length} instrumento(s)</b> vencem em até 10 dias.</span></div>`;
+    html += `<div class="alerta laranja" data-filtro="laranja"><span class="icone">⚠️</span><span><b>${ate10.length} instrumento(s)</b> vencem em até 10 dias.</span></div>`;
   }
   if(ate20.length){
-    html += `<div class="alerta amarelo"><span class="icone">⏳</span><span><b>${ate20.length} instrumento(s)</b> vencem em até 20 dias.</span></div>`;
+    html += `<div class="alerta amarelo" data-filtro="amarelo"><span class="icone">⏳</span><span><b>${ate20.length} instrumento(s)</b> vencem em até 20 dias.</span></div>`;
   }
   if(ate30.length){
-    html += `<div class="alerta amarelo"><span class="icone">🗓️</span><span><b>${ate30.length} instrumento(s)</b> vencem em até 30 dias.</span></div>`;
+    html += `<div class="alerta amarelo" data-filtro="verde_alerta"><span class="icone">🗓️</span><span><b>${ate30.length} instrumento(s)</b> vencem em até 30 dias.</span></div>`;
   }
   if(ate60.length){
-    html += `<div class="alerta ok"><span class="icone">📅</span><span><b>${ate60.length} instrumento(s)</b> vencem em até 60 dias.</span></div>`;
+    html += `<div class="alerta ok" data-filtro="ate60"><span class="icone">📅</span><span><b>${ate60.length} instrumento(s)</b> vencem em até 60 dias.</span></div>`;
   }
   if(!html){
     html = `<div class="alerta ok"><span class="icone">✅</span><span>Nenhum instrumento com vencimento nos próximos 60 dias.</span></div>`;
   }
   banner.innerHTML = html;
+
+  banner.querySelectorAll('.alerta[data-filtro]').forEach(el => {
+    el.style.cursor = 'pointer';
+    el.addEventListener('click', () => irParaTabelaCom({ filtroVenc: el.dataset.filtro }));
+  });
 }
 
 /* ============ TABELA ============ */
@@ -810,6 +817,9 @@ function instrumentosFiltrados(){
       if(filtroVenc === 'amarelo' && !(dias !== null && dias > 10 && dias <= 20)) return false;
       if(filtroVenc === 'verde_alerta' && !(dias !== null && dias > 20 && dias <= 30)) return false;
       if(filtroVenc === 'ate30_total' && !(dias !== null && dias >= 0 && dias <= 30)) return false;
+      if(filtroVenc === 'ate60' && !(dias !== null && dias > 30 && dias <= 60)) return false;
+      if(filtroVenc === 'onze_a_30' && !(dias !== null && dias > 10 && dias <= 30)) return false;
+      if(filtroVenc === 'semdata' && dias !== null) return false;
       if(filtroVenc === 'verde' && !(dias !== null && dias > 30)) return false;
     }
 
@@ -1277,50 +1287,78 @@ function renderizarPizza(){
     else ok++;
   });
 
+  // Paleta alinhada à identidade da Vectra: vermelho de risco mantido por convenção
+  // de segurança; o restante usa os tons de azul-petróleo da marca.
   const fatias = [
-    { rotulo: 'Vencidos', qtd: vencidos, cor: 'var(--vermelho)' },
-    { rotulo: 'Vence em até 10 dias', qtd: ate10, cor: 'var(--laranja)' },
-    { rotulo: 'Vence em até 30 dias', qtd: ate30, cor: 'var(--amarelo)' },
-    { rotulo: 'Dentro do prazo', qtd: ok, cor: 'var(--verde)' },
-    { rotulo: 'Sem data cadastrada', qtd: semData, cor: '#B7C2CC' }
+    { rotulo: 'Vencidos', qtd: vencidos, cor: 'var(--vermelho)', filtro: 'vermelho' },
+    { rotulo: 'Vence em até 10 dias', qtd: ate10, cor: 'var(--laranja)', filtro: 'laranja' },
+    { rotulo: 'Vence em até 30 dias', qtd: ate30, cor: '#5A8CA8', filtro: 'onze_a_30' },
+    { rotulo: 'Dentro do prazo', qtd: ok, cor: 'var(--azul-media)', filtro: 'verde' },
+    { rotulo: 'Sem data cadastrada', qtd: semData, cor: '#B7C2CC', filtro: 'semdata' }
   ].filter(f => f.qtd > 0);
 
+  const grafico = document.getElementById('graficoPizza');
+
   if(total === 0){
-    document.getElementById('graficoPizza').style.background = '#EAEDF0';
+    grafico.style.background = '#EAEDF0';
     document.getElementById('legendaPizza').innerHTML = '<div class="legenda-item">Sem dados</div>';
+    grafico.dataset.fatias = '[]';
     return;
   }
 
   let acumulado = 0;
+  const limites = []; // guarda [inicioPercent, fimPercent, filtro] pra detectar clique por ângulo
   const partes = fatias.map(f => {
     const inicio = (acumulado / total) * 100;
     acumulado += f.qtd;
     const fim = (acumulado / total) * 100;
+    limites.push({ inicio, fim, filtro: f.filtro });
     return `${f.cor} ${inicio}% ${fim}%`;
   });
 
-  document.getElementById('graficoPizza').style.background = `conic-gradient(${partes.join(', ')})`;
+  grafico.style.background = `conic-gradient(${partes.join(', ')})`;
+  grafico.style.cursor = 'pointer';
+  grafico.dataset.fatias = JSON.stringify(limites);
 
   document.getElementById('legendaPizza').innerHTML = fatias.map(f => `
-    <div class="legenda-item">
+    <div class="legenda-item" data-filtro="${f.filtro}" style="cursor:pointer;">
       <span class="ponto-legenda" style="background:${f.cor};"></span>
       <span>${f.rotulo}</span>
       <span class="qtd">${f.qtd}</span>
     </div>
   `).join('');
+
+  document.querySelectorAll('#legendaPizza .legenda-item').forEach(el => {
+    el.addEventListener('click', () => irParaTabelaCom({ filtroVenc: el.dataset.filtro }));
+  });
 }
+
+// Clique na própria pizza: calcula o ângulo do clique e descobre qual fatia foi tocada
+document.getElementById('graficoPizza').addEventListener('click', (ev) => {
+  const limites = JSON.parse(document.getElementById('graficoPizza').dataset.fatias || '[]');
+  if(!limites.length) return;
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const dx = ev.clientX - cx;
+  const dy = ev.clientY - cy;
+  let angulo = Math.atan2(dy, dx) * 180 / Math.PI; // 0° = direita (3h), sentido horário
+  let percentDoTopo = ((angulo + 90) + 360) % 360 / 360 * 100; // reposiciona 0% no topo (12h)
+  const fatia = limites.find(l => percentDoTopo >= l.inicio && percentDoTopo < l.fim);
+  if(fatia) irParaTabelaCom({ filtroVenc: fatia.filtro });
+});
 
 /* ---------- Próximos a vencer ---------- */
 function renderizarProximosAVencer(){
   const comData = instrumentos
     .map(i => ({ ...i, _dias: diasAte(i['DATA DO VENCIMENTO']) }))
-    .filter(i => i._dias !== null)
+    .filter(i => i._dias !== null && i._dias >= 0)
     .sort((a,b) => a._dias - b._dias)
     .slice(0, 8);
 
   const container = document.getElementById('listaProximos');
   if(!comData.length){
-    container.innerHTML = '<div class="item-proximo">Nenhum instrumento com data de vencimento cadastrada.</div>';
+    container.innerHTML = '<div class="item-proximo">Nenhum instrumento próximo do vencimento.</div>';
     return;
   }
 
@@ -1433,6 +1471,10 @@ document.getElementById('buscaDashboard').addEventListener('keydown', e => {
 document.getElementById('cardIrTotal').addEventListener('click', () => irParaTabelaCom({}));
 document.getElementById('cardIrVencidos').addEventListener('click', () => irParaTabelaCom({ filtroVenc: 'vermelho' }));
 document.getElementById('cardIrProximos').addEventListener('click', () => irParaTabelaCom({ filtroVenc: 'ate30_total' }));
+
+document.getElementById('cardResumoIrTotal').addEventListener('click', () => irParaTabelaCom({}));
+document.getElementById('cardResumoIrAtivos').addEventListener('click', () => irParaTabelaCom({ filtroAtivo: 'ATIVO' }));
+document.getElementById('cardResumoIrInativos').addEventListener('click', () => irParaTabelaCom({ filtroAtivo: 'INATIVO' }));
 
 /* ============ INÍCIO ============ */
 carregarInstrumentos();
