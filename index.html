@@ -874,17 +874,17 @@ function renderizarTabela(){
                       : i.STATUS === 'INATIVO' ? '<span class="status-inativo">● Inativo</span>'
                       : '<span class="sem-dado">—</span>';
     return `<tr>
-      <td title="${(i.INSTRUMENTO || '').replace(/"/g,'&quot;')}">${i.INSTRUMENTO || ''}</td>
+      <td title="${String(i.INSTRUMENTO || '').replace(/"/g,'&quot;')}">${i.INSTRUMENTO || ''}</td>
       <td>${i.TAG || '<span class="sem-dado">N/C</span>'}</td>
-      <td title="${(i['Nº DE SERIE'] || '').replace(/"/g,'&quot;')}">${i['Nº DE SERIE'] || '<span class="sem-dado">N/C</span>'}</td>
-      <td title="${(i.MODELO || '').replace(/"/g,'&quot;')}">${i.MODELO || '<span class="sem-dado">N/C</span>'}</td>
-      <td title="${(i.MARCA || '').replace(/"/g,'&quot;')}">${i.MARCA || ''}</td>
+      <td title="${String(i['Nº DE SERIE'] || '').replace(/"/g,'&quot;')}">${i['Nº DE SERIE'] || '<span class="sem-dado">N/C</span>'}</td>
+      <td title="${String(i.MODELO || '').replace(/"/g,'&quot;')}">${i.MODELO || '<span class="sem-dado">N/C</span>'}</td>
+      <td title="${String(i.MARCA || '').replace(/"/g,'&quot;')}">${i.MARCA || ''}</td>
       <td>${formatarData(i['DATA DA AFERIÇÃO'])}</td>
       <td class="col-vencimento">${formatarData(i['DATA DO VENCIMENTO'])} ${badgeVencimento(dias)}</td>
-      <td title="${(i['LABORATÓRIO'] || '').replace(/"/g,'&quot;')}">${i['LABORATÓRIO'] || ''}</td>
+      <td title="${String(i['LABORATÓRIO'] || '').replace(/"/g,'&quot;')}">${i['LABORATÓRIO'] || ''}</td>
       <td>${i.CERTIFICADO ? (i.LINK_CERTIFICADO ? `<a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600;">${i.CERTIFICADO} 📄</a>` : i.CERTIFICADO) : ''}</td>
       <td>${statusHtml}</td>
-      <td title="${(i.INSPETOR || '').replace(/"/g,'&quot;')}">${i.INSPETOR || '<span class="sem-dado">Não atribuído</span>'}</td>
+      <td title="${String(i.INSPETOR || '').replace(/"/g,'&quot;')}">${i.INSPETOR || '<span class="sem-dado">Não atribuído</span>'}</td>
     </tr>`;
   }).join('');
 }
