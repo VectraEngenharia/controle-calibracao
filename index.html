@@ -625,7 +625,11 @@
         <div class="campo"><label>Data da aferição</label><input id="addAfericao" type="date"></div>
         <div class="campo"><label>Data do vencimento</label><input id="addVencimento" type="date"></div>
         <div class="campo"><label>Laboratório</label><input id="addLaboratorio" type="text"></div>
-        <div class="campo"><label>Certificado</label><input id="addCertificado" type="text"></div>
+        <div class="campo">
+          <label>Certificado</label>
+          <input id="addCertificado" type="text">
+          <div id="avisoCertificadoDuplicado" style="display:none;margin-top:6px;padding:8px 11px;background:var(--amarelo-bg);color:var(--amarelo);border-radius:6px;font-size:.78rem;"></div>
+        </div>
         <div class="campo">
           <label>PDF do certificado (opcional)</label>
           <input id="addCertificadoArquivo" type="file" accept="application/pdf">
@@ -742,6 +746,10 @@ function diasAte(dataStr){
   const alvo = new Date(data + 'T00:00:00');
   return Math.round((alvo - hoje) / 86400000);
 }
+// Instrumentos INATIVOS não entram nas contagens de vencimento (banners, gráfico, alertas)
+function instrumentosParaAlertas(){
+  return instrumentos.filter(i => (i.STATUS || '').toUpperCase() !== 'INATIVO');
+}
 function formatarData(dataStr){
   const data = apenasData(dataStr);
   if(!data) return '<span class="sem-dado">N/C</span>';
@@ -786,11 +794,12 @@ async function carregarInstrumentos(){
 /* ============ BANNER DE ALERTAS ============ */
 function renderizarBanner(){
   const banner = document.getElementById('banner');
-  const vencidos = instrumentos.filter(i => diasAte(i['DATA DO VENCIMENTO']) !== null && diasAte(i['DATA DO VENCIMENTO']) < 0);
-  const ate10 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d >= 0 && d <= 10; });
-  const ate20 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 10 && d <= 20; });
-  const ate30 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 20 && d <= 30; });
-  const ate60 = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 30 && d <= 60; });
+  const base = instrumentosParaAlertas();
+  const vencidos = base.filter(i => diasAte(i['DATA DO VENCIMENTO']) !== null && diasAte(i['DATA DO VENCIMENTO']) < 0);
+  const ate10 = base.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d >= 0 && d <= 10; });
+  const ate20 = base.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 10 && d <= 20; });
+  const ate30 = base.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 20 && d <= 30; });
+  const ate60 = base.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d > 30 && d <= 60; });
 
   let html = '';
   if(vencidos.length){
@@ -1015,7 +1024,7 @@ document.querySelectorAll('.tab').forEach(tab => {
 /* ============ SELECTS DE INSTRUMENTOS ============ */
 function preencherSelects(){
   const opcoes = instrumentos
-    .map(i => `<option value="${i.ID}">${i.INSTRUMENTO} — ${i.TAG || 'N/C'} (ID ${i.ID})</option>`)
+    .map(i => `<option value="${i.ID}">${i.INSTRUMENTO} — Certificado ${i.CERTIFICADO || 'N/C'} (ID ${i.ID})</option>`)
     .join('');
   ['reatribuirSelect','statusSelect','removerSelect','certificadoSelect','editarSelect'].forEach(id => {
     const sel = document.getElementById(id);
@@ -1054,9 +1063,34 @@ function lerArquivoComoBase64(arquivo){
   });
 }
 
+/* ---------- Aviso de certificado duplicado ---------- */
+function encontrarCertificadoDuplicado(valor){
+  const alvo = String(valor || '').trim().toLowerCase();
+  if(!alvo) return null;
+  return instrumentos.find(i => String(i.CERTIFICADO || '').trim().toLowerCase() === alvo) || null;
+}
+
+document.getElementById('addCertificado').addEventListener('input', () => {
+  const aviso = document.getElementById('avisoCertificadoDuplicado');
+  const duplicado = encontrarCertificadoDuplicado(document.getElementById('addCertificado').value);
+  if(duplicado){
+    aviso.style.display = 'block';
+    aviso.innerHTML = `⚠️ Esse número de certificado já está em uso por <b>${duplicado.INSTRUMENTO}</b> (ID ${duplicado.ID}).`;
+  } else {
+    aviso.style.display = 'none';
+  }
+});
+
 document.getElementById('btnAdicionar').addEventListener('click', async () => {
   const nome = document.getElementById('addInstrumento').value.trim();
   if(!nome){ mostrarMsg('Preencha o nome do instrumento.', 'erro'); return; }
+
+  const certificadoDigitado = document.getElementById('addCertificado').value.trim();
+  const duplicado = encontrarCertificadoDuplicado(certificadoDigitado);
+  if(duplicado){
+    const confirmar = confirm(`Já existe um instrumento com o certificado "${certificadoDigitado}": ${duplicado.INSTRUMENTO} (ID ${duplicado.ID}).\n\nDeseja continuar e cadastrar mesmo assim?`);
+    if(!confirmar) return;
+  }
 
   const arquivoPdf = document.getElementById('addCertificadoArquivo').files[0];
 
@@ -1069,7 +1103,7 @@ document.getElementById('btnAdicionar').addEventListener('click', async () => {
     'DATA DA AFERIÇÃO': document.getElementById('addAfericao').value,
     'DATA DO VENCIMENTO': document.getElementById('addVencimento').value,
     'LABORATÓRIO': document.getElementById('addLaboratorio').value.trim(),
-    CERTIFICADO: document.getElementById('addCertificado').value.trim(),
+    CERTIFICADO: certificadoDigitado,
     STATUS: document.getElementById('addStatus').value,
     INSPETOR: document.getElementById('addInspetor').value.trim()
   };
@@ -1101,6 +1135,7 @@ document.getElementById('btnAdicionar').addEventListener('click', async () => {
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('addStatus').value = '';
     document.getElementById('addCertificadoArquivo').value = '';
+    document.getElementById('avisoCertificadoDuplicado').style.display = 'none';
     await carregarInstrumentos();
   } finally {
     btn.disabled = false;
@@ -1293,10 +1328,11 @@ function renderizarDashboard(){
 
 /* ---------- Gráfico de pizza ---------- */
 function renderizarPizza(){
-  const total = instrumentos.length;
+  const base = instrumentosParaAlertas();
+  const total = base.length;
   let vencidos = 0, ate10 = 0, ate30 = 0, ok = 0, semData = 0;
 
-  instrumentos.forEach(i => {
+  base.forEach(i => {
     const d = diasAte(i['DATA DO VENCIMENTO']);
     if(d === null) semData++;
     else if(d < 0) vencidos++;
@@ -1368,7 +1404,7 @@ document.getElementById('graficoPizza').addEventListener('click', (ev) => {
 
 /* ---------- Próximos a vencer ---------- */
 function renderizarProximosAVencer(){
-  const comData = instrumentos
+  const comData = instrumentosParaAlertas()
     .map(i => ({ ...i, _dias: diasAte(i['DATA DO VENCIMENTO']) }))
     .filter(i => i._dias !== null && i._dias >= 0)
     .sort((a,b) => a._dias - b._dias)
@@ -1452,8 +1488,9 @@ function mostrarTabela(){
   document.getElementById('btnVerTabela').classList.add('ativa');
 }
 function atualizarStatsAdminHome(){
-  const vencidos = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d < 0; }).length;
-  const proximos = instrumentos.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d >= 0 && d <= 30; }).length;
+  const base = instrumentosParaAlertas();
+  const vencidos = base.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d < 0; }).length;
+  const proximos = base.filter(i => { const d = diasAte(i['DATA DO VENCIMENTO']); return d !== null && d >= 0 && d <= 30; }).length;
   document.getElementById('adminCardTotal').textContent = instrumentos.length;
   document.getElementById('adminCardVencidos').textContent = vencidos;
   document.getElementById('adminCardProximos').textContent = proximos;
