@@ -609,6 +609,18 @@
       <select id="editarLinhaStatus"><option value="">—</option><option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option></select>
     </div>
     <div class="campo">
+      <label>Data da aferição</label>
+      <input id="editarLinhaAfericao" type="date">
+    </div>
+    <div class="campo">
+      <label>Data do vencimento</label>
+      <input id="editarLinhaVencimento" type="date">
+    </div>
+    <div class="campo">
+      <label>Inspetor</label>
+      <input id="editarLinhaInspetor" type="text" placeholder="Deixe vazio para remover atribuição">
+    </div>
+    <div class="campo">
       <label>Certificado</label>
       <input id="editarLinhaCertificado" type="text">
       <div id="avisoEditarLinhaCertificadoDuplicado" style="display:none;margin-top:6px;padding:8px 11px;background:var(--amarelo-bg);color:var(--amarelo);border-radius:6px;font-size:.78rem;"></div>
@@ -1515,6 +1527,9 @@ function abrirModalEditarLinha(id){
 
   document.getElementById('modalEditarLinhaTitulo').textContent = `Editar — ${i.INSTRUMENTO}`;
   document.getElementById('editarLinhaStatus').value = i.STATUS || '';
+  document.getElementById('editarLinhaAfericao').value = apenasData(i['DATA DA AFERIÇÃO']) || '';
+  document.getElementById('editarLinhaVencimento').value = apenasData(i['DATA DO VENCIMENTO']) || '';
+  document.getElementById('editarLinhaInspetor').value = i.INSPETOR || '';
   document.getElementById('editarLinhaCertificado').value = i.CERTIFICADO || '';
   document.getElementById('editarLinhaArquivo').value = '';
   document.getElementById('msgEditarLinha').style.display = 'none';
@@ -1550,6 +1565,9 @@ document.getElementById('btnSalvarEditarLinha').addEventListener('click', async 
   if(!id) return;
 
   const statusNovo = document.getElementById('editarLinhaStatus').value;
+  const afericaoNova = document.getElementById('editarLinhaAfericao').value;
+  const vencimentoNovo = document.getElementById('editarLinhaVencimento').value;
+  const inspetorNovo = document.getElementById('editarLinhaInspetor').value.trim();
   const certificadoNovo = document.getElementById('editarLinhaCertificado').value.trim();
   const arquivo = document.getElementById('editarLinhaArquivo').files[0];
 
@@ -1563,33 +1581,30 @@ document.getElementById('btnSalvarEditarLinha').addEventListener('click', async 
   btn.disabled = true;
   btn.textContent = 'Salvando...';
 
+  function erroSalvar(msg){
+    document.getElementById('msgEditarLinha').textContent = msg;
+    document.getElementById('msgEditarLinha').className = 'msg erro';
+    document.getElementById('msgEditarLinha').style.display = 'block';
+  }
+
   try{
     const respStatus = await chamarApi({ action: 'updateStatus', id, status: statusNovo });
-    if(!respStatus.ok){
-      document.getElementById('msgEditarLinha').textContent = respStatus.erro || 'Erro ao salvar status.';
-      document.getElementById('msgEditarLinha').className = 'msg erro';
-      document.getElementById('msgEditarLinha').style.display = 'block';
-      return;
-    }
+    if(!respStatus.ok){ erroSalvar(respStatus.erro || 'Erro ao salvar status.'); return; }
+
+    const respDatas = await chamarApi({ action: 'updateDatas', id, afericao: afericaoNova, vencimento: vencimentoNovo });
+    if(!respDatas.ok){ erroSalvar(respDatas.erro || 'Erro ao salvar as datas.'); return; }
+
+    const respInspetor = await chamarApi({ action: 'reassignInspector', id, inspetor: inspetorNovo });
+    if(!respInspetor.ok){ erroSalvar(respInspetor.erro || 'Erro ao salvar o inspetor.'); return; }
 
     const respCert = await chamarApi({ action: 'updateCertificadoNumero', id, certificado: certificadoNovo });
-    if(!respCert.ok){
-      document.getElementById('msgEditarLinha').textContent = respCert.erro || 'Erro ao salvar certificado.';
-      document.getElementById('msgEditarLinha').className = 'msg erro';
-      document.getElementById('msgEditarLinha').style.display = 'block';
-      return;
-    }
+    if(!respCert.ok){ erroSalvar(respCert.erro || 'Erro ao salvar certificado.'); return; }
 
     if(arquivo){
       btn.textContent = 'Enviando PDF...';
       const conteudoBase64 = await lerArquivoComoBase64(arquivo);
       const respUpload = await chamarApi({ action: 'uploadCertificado', id, conteudoBase64 });
-      if(!respUpload.ok){
-        document.getElementById('msgEditarLinha').textContent = respUpload.erro || 'Status e certificado salvos, mas houve erro ao enviar o PDF.';
-        document.getElementById('msgEditarLinha').className = 'msg erro';
-        document.getElementById('msgEditarLinha').style.display = 'block';
-        return;
-      }
+      if(!respUpload.ok){ erroSalvar(respUpload.erro || 'Demais dados salvos, mas houve erro ao enviar o PDF.'); return; }
     }
 
     await carregarInstrumentos();
