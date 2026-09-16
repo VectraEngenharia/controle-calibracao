@@ -308,13 +308,20 @@
   .linha-tipo:hover{background:var(--azul-claro);}
 
   /* ---------- Modal de detalhes do tipo ---------- */
-  #overlayModal{display:none;position:fixed;inset:0;background:rgba(18,40,63,.45);z-index:60;}
-  #modalTipo{
+  .btn-editar-linha{
+    background:none;border:none;cursor:pointer;color:var(--azul);
+    font-size:.85rem;padding:1px 4px;border-radius:4px;vertical-align:middle;
+  }
+  .btn-editar-linha:hover{background:var(--azul-claro);}
+
+  #overlayModal, #overlayModalEditar{display:none;position:fixed;inset:0;background:rgba(18,40,63,.45);z-index:60;}
+  #modalTipo, #modalEditarLinha{
     display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
     width:min(640px,92vw);max-height:80vh;background:var(--branco);border-radius:10px;
     box-shadow:0 12px 32px rgba(0,0,0,.2);z-index:70;overflow:hidden;
     flex-direction:column;
   }
+  #modalEditarLinha{width:min(440px,92vw);}
   .modal-header{
     background:var(--azul-escuro);color:var(--branco);padding:16px 20px;
     display:flex;justify-content:space-between;align-items:center;
@@ -587,6 +594,32 @@
     <button id="fecharModalTipo">✕</button>
   </div>
   <div class="modal-corpo" id="modalTipoCorpo"></div>
+</div>
+
+<div id="overlayModalEditar"></div>
+<div id="modalEditarLinha">
+  <div class="modal-header">
+    <h3 id="modalEditarLinhaTitulo">Editar instrumento</h3>
+    <button id="fecharModalEditarLinha">✕</button>
+  </div>
+  <div class="modal-corpo" style="padding:18px 20px;">
+    <div class="msg" id="msgEditarLinha"></div>
+    <div class="campo">
+      <label>Status</label>
+      <select id="editarLinhaStatus"><option value="">—</option><option value="ATIVO">ATIVO</option><option value="INATIVO">INATIVO</option></select>
+    </div>
+    <div class="campo">
+      <label>Certificado</label>
+      <input id="editarLinhaCertificado" type="text">
+      <div id="avisoEditarLinhaCertificadoDuplicado" style="display:none;margin-top:6px;padding:8px 11px;background:var(--amarelo-bg);color:var(--amarelo);border-radius:6px;font-size:.78rem;"></div>
+    </div>
+    <div id="editarLinhaPdfAtual" style="font-size:.78rem;margin-bottom:12px;"></div>
+    <div class="campo">
+      <label>Substituir PDF do certificado (opcional)</label>
+      <input id="editarLinhaArquivo" type="file" accept="application/pdf">
+    </div>
+    <button class="btn-primario" id="btnSalvarEditarLinha">Salvar alterações</button>
+  </div>
 </div>
 
 <div id="overlay"></div>
@@ -892,7 +925,7 @@ function renderizarTabela(){
       <td class="col-vencimento">${formatarData(i['DATA DO VENCIMENTO'])} ${badgeVencimento(dias)}</td>
       <td title="${String(i['LABORATÓRIO'] || '').replace(/"/g,'&quot;')}">${i['LABORATÓRIO'] || ''}</td>
       <td>${i.CERTIFICADO ? (i.LINK_CERTIFICADO ? `<a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600;">${i.CERTIFICADO} 📄</a>` : i.CERTIFICADO) : ''}</td>
-      <td>${statusHtml}</td>
+      <td>${statusHtml}${sessao ? ` <button class="btn-editar-linha" data-id="${i.ID}" title="Editar status/certificado/PDF">✎</button>` : ''}</td>
       <td title="${String(i.INSPETOR || '').replace(/"/g,'&quot;')}">${i.INSPETOR || '<span class="sem-dado">Não atribuído</span>'}</td>
     </tr>`;
   }).join('');
@@ -1064,10 +1097,10 @@ function lerArquivoComoBase64(arquivo){
 }
 
 /* ---------- Aviso de certificado duplicado ---------- */
-function encontrarCertificadoDuplicado(valor){
+function encontrarCertificadoDuplicado(valor, idExcluir){
   const alvo = String(valor || '').trim().toLowerCase();
   if(!alvo) return null;
-  return instrumentos.find(i => String(i.CERTIFICADO || '').trim().toLowerCase() === alvo) || null;
+  return instrumentos.find(i => String(i.CERTIFICADO || '').trim().toLowerCase() === alvo && String(i.ID) !== String(idExcluir || '')) || null;
 }
 
 document.getElementById('addCertificado').addEventListener('input', () => {
@@ -1463,6 +1496,109 @@ function fecharModalTipo(){
 }
 document.getElementById('fecharModalTipo').addEventListener('click', fecharModalTipo);
 overlayModal.addEventListener('click', fecharModalTipo);
+
+/* ============ EDIÇÃO RÁPIDA POR LINHA (status / certificado / PDF) ============ */
+const overlayModalEditar = document.getElementById('overlayModalEditar');
+const modalEditarLinha = document.getElementById('modalEditarLinha');
+let idEmEdicaoRapida = null;
+
+document.getElementById('corpoTabela').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('.btn-editar-linha');
+  if(!btn) return;
+  abrirModalEditarLinha(btn.dataset.id);
+});
+
+function abrirModalEditarLinha(id){
+  const i = instrumentos.find(x => String(x.ID) === String(id));
+  if(!i) return;
+  idEmEdicaoRapida = id;
+
+  document.getElementById('modalEditarLinhaTitulo').textContent = `Editar — ${i.INSTRUMENTO}`;
+  document.getElementById('editarLinhaStatus').value = i.STATUS || '';
+  document.getElementById('editarLinhaCertificado').value = i.CERTIFICADO || '';
+  document.getElementById('editarLinhaArquivo').value = '';
+  document.getElementById('msgEditarLinha').style.display = 'none';
+  document.getElementById('avisoEditarLinhaCertificadoDuplicado').style.display = 'none';
+  document.getElementById('editarLinhaPdfAtual').innerHTML = i.LINK_CERTIFICADO
+    ? `Certificado atual: <a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);">ver PDF</a>`
+    : '<span style="color:var(--texto-suave);">Nenhum certificado enviado ainda.</span>';
+
+  overlayModalEditar.style.display = 'block';
+  modalEditarLinha.style.display = 'flex';
+}
+function fecharModalEditarLinha(){
+  overlayModalEditar.style.display = 'none';
+  modalEditarLinha.style.display = 'none';
+  idEmEdicaoRapida = null;
+}
+document.getElementById('fecharModalEditarLinha').addEventListener('click', fecharModalEditarLinha);
+overlayModalEditar.addEventListener('click', fecharModalEditarLinha);
+
+document.getElementById('editarLinhaCertificado').addEventListener('input', () => {
+  const aviso = document.getElementById('avisoEditarLinhaCertificadoDuplicado');
+  const duplicado = encontrarCertificadoDuplicado(document.getElementById('editarLinhaCertificado').value, idEmEdicaoRapida);
+  if(duplicado){
+    aviso.style.display = 'block';
+    aviso.innerHTML = `⚠️ Esse número de certificado já está em uso por <b>${duplicado.INSTRUMENTO}</b> (ID ${duplicado.ID}).`;
+  } else {
+    aviso.style.display = 'none';
+  }
+});
+
+document.getElementById('btnSalvarEditarLinha').addEventListener('click', async () => {
+  const id = idEmEdicaoRapida;
+  if(!id) return;
+
+  const statusNovo = document.getElementById('editarLinhaStatus').value;
+  const certificadoNovo = document.getElementById('editarLinhaCertificado').value.trim();
+  const arquivo = document.getElementById('editarLinhaArquivo').files[0];
+
+  const duplicado = encontrarCertificadoDuplicado(certificadoNovo, id);
+  if(duplicado){
+    const confirmar = confirm(`Já existe um instrumento com o certificado "${certificadoNovo}": ${duplicado.INSTRUMENTO} (ID ${duplicado.ID}).\n\nDeseja continuar e salvar mesmo assim?`);
+    if(!confirmar) return;
+  }
+
+  const btn = document.getElementById('btnSalvarEditarLinha');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try{
+    const respStatus = await chamarApi({ action: 'updateStatus', id, status: statusNovo });
+    if(!respStatus.ok){
+      document.getElementById('msgEditarLinha').textContent = respStatus.erro || 'Erro ao salvar status.';
+      document.getElementById('msgEditarLinha').className = 'msg erro';
+      document.getElementById('msgEditarLinha').style.display = 'block';
+      return;
+    }
+
+    const respCert = await chamarApi({ action: 'updateCertificadoNumero', id, certificado: certificadoNovo });
+    if(!respCert.ok){
+      document.getElementById('msgEditarLinha').textContent = respCert.erro || 'Erro ao salvar certificado.';
+      document.getElementById('msgEditarLinha').className = 'msg erro';
+      document.getElementById('msgEditarLinha').style.display = 'block';
+      return;
+    }
+
+    if(arquivo){
+      btn.textContent = 'Enviando PDF...';
+      const conteudoBase64 = await lerArquivoComoBase64(arquivo);
+      const respUpload = await chamarApi({ action: 'uploadCertificado', id, conteudoBase64 });
+      if(!respUpload.ok){
+        document.getElementById('msgEditarLinha').textContent = respUpload.erro || 'Status e certificado salvos, mas houve erro ao enviar o PDF.';
+        document.getElementById('msgEditarLinha').className = 'msg erro';
+        document.getElementById('msgEditarLinha').style.display = 'block';
+        return;
+      }
+    }
+
+    await carregarInstrumentos();
+    fecharModalEditarLinha();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar alterações';
+  }
+});
 
 /* ============ NAVEGAÇÃO ENTRE TELAS ============ */
 function ocultarTodasAsViews(){
