@@ -410,6 +410,52 @@
     main{padding:14px 12px 40px;}
     thead th, tbody td{padding:8px 9px;}
   }
+
+  /* ---------- Tabela em formato de cartões no celular ---------- */
+  @media (max-width:760px){
+    .tabela-wrap{max-height:none;}
+    table{table-layout:auto;}
+    colgroup{display:none;}
+
+    thead{display:none;}
+    tbody, tr, td{display:block;width:100%;}
+    tr{
+      border-bottom:1px solid var(--cinza-borda);
+      padding:12px 4px 14px;
+    }
+    tr:last-child{border-bottom:none;}
+
+    td{
+      padding:3px 0;
+      white-space:normal;
+      overflow:visible;
+      text-overflow:clip;
+      border-bottom:none;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      font-size:.82rem;
+    }
+    td[data-label]::before{
+      content: attr(data-label);
+      font-weight:600;
+      color:var(--texto-suave);
+      font-size:.72rem;
+      white-space:nowrap;
+      flex-shrink:0;
+    }
+    /* Primeira célula (Instrumento) vira o título do cartão, sem rótulo */
+    td.col-titulo{
+      font-size:.95rem;
+      font-weight:700;
+      color:var(--texto);
+      padding-bottom:6px;
+      display:block;
+    }
+    td.col-titulo::before{ content:none; }
+    td.col-vencimento{ text-align:right; }
+  }
 </style>
 </head>
 <body>
@@ -928,17 +974,17 @@ function renderizarTabela(){
                       : i.STATUS === 'INATIVO' ? '<span class="status-inativo">● Inativo</span>'
                       : '<span class="sem-dado">—</span>';
     return `<tr>
-      <td title="${String(i.INSTRUMENTO || '').replace(/"/g,'&quot;')}">${i.INSTRUMENTO || ''}</td>
-      <td>${i.TAG || '<span class="sem-dado">N/C</span>'}</td>
-      <td title="${String(i['Nº DE SERIE'] || '').replace(/"/g,'&quot;')}">${i['Nº DE SERIE'] || '<span class="sem-dado">N/C</span>'}</td>
-      <td title="${String(i.MODELO || '').replace(/"/g,'&quot;')}">${i.MODELO || '<span class="sem-dado">N/C</span>'}</td>
-      <td title="${String(i.MARCA || '').replace(/"/g,'&quot;')}">${i.MARCA || ''}</td>
-      <td>${formatarData(i['DATA DA AFERIÇÃO'])}</td>
-      <td class="col-vencimento">${formatarData(i['DATA DO VENCIMENTO'])} ${badgeVencimento(dias)}</td>
-      <td title="${String(i['LABORATÓRIO'] || '').replace(/"/g,'&quot;')}">${i['LABORATÓRIO'] || ''}</td>
-      <td>${i.CERTIFICADO ? (i.LINK_CERTIFICADO ? `<a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600;">${i.CERTIFICADO} 📄</a>` : i.CERTIFICADO) : ''}</td>
-      <td>${statusHtml}${sessao ? ` <button class="btn-editar-linha" data-id="${i.ID}" title="Editar status/certificado/PDF">✎</button>` : ''}</td>
-      <td title="${String(i.INSPETOR || '').replace(/"/g,'&quot;')}">${i.INSPETOR || '<span class="sem-dado">Não atribuído</span>'}</td>
+      <td class="col-titulo" title="${String(i.INSTRUMENTO || '').replace(/"/g,'&quot;')}">${i.INSTRUMENTO || ''}</td>
+      <td data-label="Tag">${i.TAG || '<span class="sem-dado">N/C</span>'}</td>
+      <td data-label="Nº Série" title="${String(i['Nº DE SERIE'] || '').replace(/"/g,'&quot;')}">${i['Nº DE SERIE'] || '<span class="sem-dado">N/C</span>'}</td>
+      <td data-label="Modelo" title="${String(i.MODELO || '').replace(/"/g,'&quot;')}">${i.MODELO || '<span class="sem-dado">N/C</span>'}</td>
+      <td data-label="Marca" title="${String(i.MARCA || '').replace(/"/g,'&quot;')}">${i.MARCA || ''}</td>
+      <td data-label="Aferição">${formatarData(i['DATA DA AFERIÇÃO'])}</td>
+      <td class="col-vencimento" data-label="Vencimento">${formatarData(i['DATA DO VENCIMENTO'])} ${badgeVencimento(dias)}</td>
+      <td data-label="Laboratório" title="${String(i['LABORATÓRIO'] || '').replace(/"/g,'&quot;')}">${i['LABORATÓRIO'] || ''}</td>
+      <td data-label="Certificado">${i.CERTIFICADO ? (i.LINK_CERTIFICADO ? `<a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600;">${i.CERTIFICADO} 📄</a>` : i.CERTIFICADO) : ''}</td>
+      <td data-label="Status">${statusHtml}${sessao ? ` <button class="btn-editar-linha" data-id="${i.ID}" title="Editar status/certificado/PDF">✎</button>` : ''}</td>
+      <td data-label="Inspetor" title="${String(i.INSPETOR || '').replace(/"/g,'&quot;')}">${i.INSPETOR || '<span class="sem-dado">Não atribuído</span>'}</td>
     </tr>`;
   }).join('');
 }
