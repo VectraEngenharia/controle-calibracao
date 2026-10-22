@@ -67,6 +67,7 @@
   #btnAdminToggle:hover{background:#1C3853;}
 
   main{display:none;max-width:1280px;margin:0 auto;padding:20px 20px 60px;}
+  main.main-largo{max-width:1900px;}
 
   /* ---------- Banner de notificações ---------- */
   #banner{margin-bottom:18px;}
@@ -1717,17 +1718,20 @@ function mostrarAdminHome(){
   ocultarTodasAsViews();
   document.getElementById('viewAdminHome').style.display = 'block';
   document.getElementById('btnVerAdminHome').classList.add('ativa');
+  document.querySelector('main').classList.remove('main-largo');
   atualizarStatsAdminHome();
 }
 function mostrarDashboard(){
   ocultarTodasAsViews();
   document.getElementById('viewDashboard').style.display = 'block';
   document.getElementById('btnVerDashboard').classList.add('ativa');
+  document.querySelector('main').classList.remove('main-largo');
 }
 function mostrarTabela(){
   ocultarTodasAsViews();
   document.getElementById('viewTabela').style.display = 'block';
   document.getElementById('btnVerTabela').classList.add('ativa');
+  document.querySelector('main').classList.add('main-largo');
   renderizarTabela();
 }
 function atualizarStatsAdminHome(){
