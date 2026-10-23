@@ -604,17 +604,18 @@
         <colgroup>
           <col style="width:14%">
           <col style="width:5%">
-          <col style="width:8%">
-          <col style="width:8%">
+          <col style="width:7%">
+          <col style="width:7%">
+          <col style="width:5%">
           <col style="width:6%">
-          <col style="width:7%">
-          <col style="width:7%">
-          <col style="width:7%">
           <col style="width:6%">
-          <col style="width:11%">
+          <col style="width:6%">
+          <col style="width:5%">
           <col style="width:8%">
-          <col style="width:6%">
+          <col style="width:9%">
           <col style="width:7%">
+          <col style="width:6%">
+          <col style="width:9%">
         </colgroup>
         <thead>
           <tr>
@@ -627,6 +628,7 @@
             <th data-col="DATA DO VENCIMENTO">Vencimento</th>
             <th data-col="DATA DE VERIFICAÇÃO">Verificação</th>
             <th data-col="APROVADO">Aprovado</th>
+            <th data-col="APROVADO POR">Aprovado por</th>
             <th data-col="LABORATÓRIO">Laboratório</th>
             <th data-col="CERTIFICADO">Certificado</th>
             <th data-col="STATUS">Status</th>
@@ -634,7 +636,7 @@
           </tr>
         </thead>
         <tbody id="corpoTabela">
-          <tr><td colspan="13" class="rodape-carregando">Carregando instrumentos...</td></tr>
+          <tr><td colspan="14" class="rodape-carregando">Carregando instrumentos...</td></tr>
         </tbody>
       </table>
     </div>
@@ -677,6 +679,10 @@
     <div class="campo">
       <label>Aprovado</label>
       <select id="editarLinhaAprovado"><option value="">—</option><option value="SIM">SIM</option><option value="NÃO">NÃO</option></select>
+    </div>
+    <div class="campo">
+      <label>Aprovado por</label>
+      <input id="editarLinhaAprovadoPor" type="text" placeholder="Nome de quem aprovou">
     </div>
     <div class="campo">
       <label>Inspetor</label>
@@ -736,6 +742,7 @@
           <label>Aprovado</label>
           <select id="addAprovado"><option value="">—</option><option value="SIM">SIM</option><option value="NÃO">NÃO</option></select>
         </div>
+        <div class="campo"><label>Aprovado por</label><input id="addAprovadoPor" type="text" placeholder="Nome de quem aprovou"></div>
         <div class="campo"><label>Laboratório</label><input id="addLaboratorio" type="text"></div>
         <div class="campo">
           <label>Certificado</label>
@@ -772,6 +779,7 @@
           <label>Aprovado</label>
           <select id="editAprovado"><option value="">—</option><option value="SIM">SIM</option><option value="NÃO">NÃO</option></select>
         </div>
+        <div class="campo"><label>Aprovado por</label><input id="editAprovadoPor" type="text" placeholder="Nome de quem aprovou"></div>
         <div class="campo"><label>Laboratório</label><input id="editLaboratorio" type="text"></div>
         <div class="campo"><label>Certificado</label><input id="editCertificado" type="text"></div>
         <button class="btn-primario" id="btnEditar">Salvar alterações</button>
@@ -904,7 +912,7 @@ async function carregarInstrumentos(){
     if(sessao) atualizarStatsAdminHome();
   }catch(err){
     document.getElementById('corpoTabela').innerHTML =
-      `<tr><td colspan="13" class="rodape-carregando">Não foi possível carregar os dados. Verifique sua conexão. (${err.message})</td></tr>`;
+      `<tr><td colspan="14" class="rodape-carregando">Não foi possível carregar os dados. Verifique sua conexão. (${err.message})</td></tr>`;
   }
 }
 
@@ -968,7 +976,7 @@ function instrumentosFiltrados(){
     }
 
     if(!termo) return true;
-    const campos = ['INSTRUMENTO','TAG','Nº DE SERIE','MODELO','MARCA','LABORATÓRIO','CERTIFICADO','INSPETOR'];
+    const campos = ['INSTRUMENTO','TAG','Nº DE SERIE','MODELO','MARCA','LABORATÓRIO','CERTIFICADO','INSPETOR','APROVADO POR'];
     return campos.some(c => String(i[c] || '').toLowerCase().includes(termo));
   });
 }
@@ -990,7 +998,7 @@ function renderizarTabela(){
   document.getElementById('contagem').textContent = `${lista.length} de ${instrumentos.length} instrumento(s)`;
 
   if(!lista.length){
-    corpo.innerHTML = `<tr><td colspan="13" class="rodape-carregando">Nenhum instrumento encontrado com esse filtro.</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="14" class="rodape-carregando">Nenhum instrumento encontrado com esse filtro.</td></tr>`;
     return;
   }
 
@@ -1013,6 +1021,7 @@ function renderizarTabela(){
       <td class="col-vencimento" data-label="Vencimento">${formatarData(i['DATA DO VENCIMENTO'])} ${badgeVencimento(dias)}</td>
       <td data-label="Verificação">${formatarData(i['DATA DE VERIFICAÇÃO'])}</td>
       <td data-label="Aprovado">${aprovadoHtml}</td>
+      <td data-label="Aprovado por" title="${String(i['APROVADO POR'] || '').replace(/"/g,'&quot;')}">${i['APROVADO POR'] || '<span class="sem-dado">—</span>'}</td>
       <td data-label="Laboratório" title="${String(i['LABORATÓRIO'] || '').replace(/"/g,'&quot;')}">${i['LABORATÓRIO'] || ''}</td>
       <td data-label="Certificado">${i.CERTIFICADO ? (i.LINK_CERTIFICADO ? `<a href="${i.LINK_CERTIFICADO}" target="_blank" rel="noopener" style="color:var(--azul);font-weight:600;">${i.CERTIFICADO} 📄</a>` : i.CERTIFICADO) : ''}</td>
       <td data-label="Status">${statusHtml}${sessao ? ` <button class="btn-editar-linha" data-id="${i.ID}" title="Editar status/certificado/PDF">✎</button>` : ''}</td>
@@ -1227,6 +1236,7 @@ document.getElementById('btnAdicionar').addEventListener('click', async () => {
     'DATA DO VENCIMENTO': document.getElementById('addVencimento').value,
     'DATA DE VERIFICAÇÃO': document.getElementById('addDataVerificacao').value,
     APROVADO: document.getElementById('addAprovado').value,
+    'APROVADO POR': document.getElementById('addAprovadoPor').value.trim(),
     'LABORATÓRIO': document.getElementById('addLaboratorio').value.trim(),
     CERTIFICADO: certificadoDigitado,
     STATUS: document.getElementById('addStatus').value,
@@ -1256,7 +1266,7 @@ document.getElementById('btnAdicionar').addEventListener('click', async () => {
     }
 
     mostrarMsg('Instrumento adicionado com sucesso.', 'sucesso');
-    ['addInstrumento','addTag','addSerie','addModelo','addMarca','addAfericao','addVencimento','addDataVerificacao','addLaboratorio','addCertificado','addInspetor']
+    ['addInstrumento','addTag','addSerie','addModelo','addMarca','addAfericao','addVencimento','addDataVerificacao','addAprovadoPor','addLaboratorio','addCertificado','addInspetor']
       .forEach(id => document.getElementById(id).value = '');
     document.getElementById('addStatus').value = '';
     document.getElementById('addAprovado').value = '';
@@ -1307,6 +1317,7 @@ document.getElementById('editarSelect').addEventListener('change', () => {
   document.getElementById('editVencimento').value = apenasData(i['DATA DO VENCIMENTO']) || '';
   document.getElementById('editDataVerificacao').value = apenasData(i['DATA DE VERIFICAÇÃO']) || '';
   document.getElementById('editAprovado').value = i.APROVADO || '';
+  document.getElementById('editAprovadoPor').value = i['APROVADO POR'] || '';
   document.getElementById('editLaboratorio').value = i['LABORATÓRIO'] || '';
   document.getElementById('editCertificado').value = i.CERTIFICADO || '';
 });
@@ -1326,6 +1337,7 @@ document.getElementById('btnEditar').addEventListener('click', async () => {
     'DATA DO VENCIMENTO': document.getElementById('editVencimento').value,
     'DATA DE VERIFICAÇÃO': document.getElementById('editDataVerificacao').value,
     APROVADO: document.getElementById('editAprovado').value,
+    'APROVADO POR': document.getElementById('editAprovadoPor').value.trim(),
     'LABORATÓRIO': document.getElementById('editLaboratorio').value.trim(),
     CERTIFICADO: document.getElementById('editCertificado').value.trim()
   };
@@ -1616,6 +1628,7 @@ function abrirModalEditarLinha(id){
   document.getElementById('editarLinhaVencimento').value = apenasData(i['DATA DO VENCIMENTO']) || '';
   document.getElementById('editarLinhaDataVerificacao').value = apenasData(i['DATA DE VERIFICAÇÃO']) || '';
   document.getElementById('editarLinhaAprovado').value = i.APROVADO || '';
+  document.getElementById('editarLinhaAprovadoPor').value = i['APROVADO POR'] || '';
   document.getElementById('editarLinhaInspetor').value = i.INSPETOR || '';
   document.getElementById('editarLinhaCertificado').value = i.CERTIFICADO || '';
   document.getElementById('editarLinhaArquivo').value = '';
@@ -1656,6 +1669,7 @@ document.getElementById('btnSalvarEditarLinha').addEventListener('click', async 
   const vencimentoNovo = document.getElementById('editarLinhaVencimento').value;
   const dataVerificacaoNova = document.getElementById('editarLinhaDataVerificacao').value;
   const aprovadoNovo = document.getElementById('editarLinhaAprovado').value;
+  const aprovadoPorNovo = document.getElementById('editarLinhaAprovadoPor').value.trim();
   const inspetorNovo = document.getElementById('editarLinhaInspetor').value.trim();
   const certificadoNovo = document.getElementById('editarLinhaCertificado').value.trim();
   const arquivo = document.getElementById('editarLinhaArquivo').files[0];
@@ -1683,7 +1697,7 @@ document.getElementById('btnSalvarEditarLinha').addEventListener('click', async 
     const respDatas = await chamarApi({ action: 'updateDatas', id, afericao: afericaoNova, vencimento: vencimentoNovo });
     if(!respDatas.ok){ erroSalvar(respDatas.erro || 'Erro ao salvar as datas.'); return; }
 
-    const respVerificacao = await chamarApi({ action: 'updateVerificacao', id, dataVerificacao: dataVerificacaoNova, aprovado: aprovadoNovo });
+    const respVerificacao = await chamarApi({ action: 'updateVerificacao', id, dataVerificacao: dataVerificacaoNova, aprovado: aprovadoNovo, aprovadoPor: aprovadoPorNovo });
     if(!respVerificacao.ok){ erroSalvar(respVerificacao.erro || 'Erro ao salvar a verificação.'); return; }
 
     const respInspetor = await chamarApi({ action: 'reassignInspector', id, inspetor: inspetorNovo });
